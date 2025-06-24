@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, DragEvent } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, UploadCloud, FileText, X } from 'lucide-react';
+import { Loader2, UploadCloud, FileText, X, Wand2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type InputFormProps = {
   action: (formData: FormData) => void;
@@ -16,22 +16,46 @@ export default function InputForm({ action, isPending }: InputFormProps) {
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      setFiles(prevFiles => [...prevFiles, ...newFiles].slice(0, 5)); // Limit to 5 files
+  const handleFileChange = (newFiles: FileList | null) => {
+    if (newFiles) {
+      const newFilesArray = Array.from(newFiles);
+      setFiles(prevFiles => [...prevFiles, ...newFilesArray].slice(0, 5)); // Limit to 5 files
     }
   };
-  
+
   const removeFile = (index: number) => {
     setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
-    // Reset file input to allow re-adding the same file
     if (fileInputRef.current) {
-        fileInputRef.current.value = "";
+      fileInputRef.current.value = "";
     }
   };
-  
+
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileChange(e.dataTransfer.files);
+      e.dataTransfer.clearData();
+    }
+  };
+
   const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -41,77 +65,88 @@ export default function InputForm({ action, isPending }: InputFormProps) {
     action(formData);
   };
 
-
   return (
-    <Card>
-      <form ref={formRef} onSubmit={handleFormSubmit}>
-        <CardHeader>
-          <CardTitle className="font-headline">1. Provide Context</CardTitle>
-          <CardDescription>
-            Enter the details for your training program.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="bg-card p-6 sm:p-8 rounded-lg shadow-sm border">
+      <form ref={formRef} onSubmit={handleFormSubmit} className="space-y-8">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Create Your Course Outline</h2>
+          <p className="text-muted-foreground mt-1">
+            Upload your material, provide context, and let the genie work its magic.
+          </p>
+        </div>
+
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="country">Target Country</Label>
-            <Input id="country" name="country" placeholder="e.g., United Kingdom" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="industry">Target Industry</Label>
-            <Input id="industry" name="industry" placeholder="e.g., Software Development" required />
-          </div>
-          <div className="space-y-2">
-            <Label>2. Upload Documents</Label>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              accept=".pdf,.docx,.pptx,.txt"
-              multiple
-            />
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
+            <Label>Course Material (up to 5 files)</Label>
+            <div
+              className={cn(
+                "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors",
+                isDragging ? "border-primary bg-primary/10" : "border-input"
+              )}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
             >
-              <UploadCloud className="mr-2" />
-              Click to upload (PDF, DOCX, PPTX, TXT)
-            </Button>
-            {files.length > 0 && (
-                <div className="mt-4 space-y-2">
-                    <h4 className="font-medium text-sm">Selected files:</h4>
-                    <ul className="space-y-2">
-                        {files.map((file, index) => (
-                            <li key={index} className="flex items-center justify-between text-sm bg-secondary p-2 rounded-md">
-                                <div className="flex items-center gap-2 truncate">
-                                    <FileText className="shrink-0" size={16}/>
-                                    <span className="truncate">{file.name}</span>
-                                </div>
-                                <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}>
-                                    <X size={16}/>
-                                </Button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+              <UploadCloud className="w-10 h-10 text-muted-foreground" />
+              <p className="mt-2 text-sm font-medium">Click to upload or drag and drop</p>
+              <p className="text-xs text-muted-foreground">PDF, DOCX, TXT, MD (Max 5 files)</p>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => handleFileChange(e.target.files)}
+                className="hidden"
+                accept=".pdf,.docx,.doc,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
+                multiple
+              />
+            </div>
           </div>
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? (
-              <>
-                <Loader2 className="animate-spin mr-2" />
-                Generating...
-              </>
-            ) : (
-              'Generate ASOs'
-            )}
-          </Button>
-        </CardFooter>
+          
+          {files.length > 0 && (
+            <div className="space-y-2">
+              <Label>Selected files:</Label>
+              <ul className="space-y-2">
+                {files.map((file, index) => (
+                  <li key={index} className="flex items-center justify-between text-sm bg-secondary p-2 rounded-md">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileText className="shrink-0" size={16} />
+                      <span className="truncate">{file.name}</span>
+                    </div>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}>
+                      <X size={16} />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="context">Target Country and/or Industry (Optional)</Label>
+          <Textarea
+            id="context"
+            name="context"
+            placeholder="e.g., Digital marketing in the UK"
+            className="bg-background"
+          />
+        </div>
+
+        <Button type="submit" className="w-full" size="lg" disabled={isPending || files.length === 0}>
+          {isPending ? (
+            <>
+              <Loader2 className="animate-spin mr-2" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Wand2 className="mr-2" />
+              Generate ASOs
+            </>
+          )}
+        </Button>
       </form>
-    </Card>
+    </div>
   );
 }

@@ -8,19 +8,23 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/msword',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'text/plain',
+  'text/markdown',
 ];
 
 const fileSchema = z
   .instanceof(File)
   .refine(file => file.size > 0, 'File cannot be empty.')
   .refine(file => file.size <= MAX_FILE_SIZE, `File size must be less than 5MB.`)
-  .refine(file => ALLOWED_FILE_TYPES.includes(file.type), 'Invalid file type.');
+  .refine(
+    file => ALLOWED_FILE_TYPES.includes(file.type) || file.name.endsWith('.md') || file.name.endsWith('.txt') || file.name.endsWith('.pdf') || file.name.endsWith('.docx'),
+    'Invalid file type. Please upload PDF, DOCX, TXT, or MD files.'
+  );
 
 const formSchema = z.object({
-  country: z.string().min(1, 'Country is required.'),
-  industry: z.string().min(1, 'Industry is required.'),
+  context: z.string().optional(),
   documents: z
     .array(fileSchema)
     .min(1, 'At least one document is required.')
@@ -31,8 +35,7 @@ type ActionState = {
   data?: GenerateAsosOutput;
   error?: string;
   input?: {
-    country: string;
-    industry: string;
+    context?: string;
     docCount: number;
   };
 };
@@ -41,7 +44,8 @@ async function fileToDataURI(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const base64 = buffer.toString('base64');
-  return `data:${file.type};base64,${base64}`;
+  const type = file.type || 'application/octet-stream';
+  return `data:${type};base64,${base64}`;
 }
 
 export async function handleGenerateAsos(
@@ -50,18 +54,17 @@ export async function handleGenerateAsos(
 ): Promise<ActionState> {
   try {
     const rawFormData = {
-      country: formData.get('country') as string,
-      industry: formData.get('industry') as string,
+      context: formData.get('context') as string,
       documents: formData.getAll('documents') as File[],
     };
 
     const validatedFields = formSchema.safeParse(rawFormData);
     if (!validatedFields.success) {
-      const errorMessages = validatedFields.error.errors.map(e => e.message).join(' ');
+      const errorMessages = validatedFields.error.errors.map(e => `${e.path.join('.')} Error: ${e.message}`).join(' ');
       return { error: errorMessages };
     }
 
-    const { country, industry, documents } = validatedFields.data;
+    const { context, documents } = validatedFields.data;
 
     const documentDataURIs = await Promise.all(
       documents.map(file => fileToDataURI(file))
@@ -69,15 +72,13 @@ export async function handleGenerateAsos(
 
     const result = await generateAsos({
       documents: documentDataURIs,
-      country,
-      industry,
+      context,
     });
 
     return {
       data: result,
       input: {
-        country,
-        industry,
+        context,
         docCount: documents.length,
       },
     };

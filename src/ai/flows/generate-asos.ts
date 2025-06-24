@@ -17,8 +17,7 @@ const GenerateAsosInputSchema = z.object({
     .describe(
       'An array of training documents, each as a data URI that must include a MIME type and use Base64 encoding. Expected format: data:<mimetype>;base64,<encoded_data>.'
     ),
-  country: z.string().describe('The target country for the ASOs.'),
-  industry: z.string().describe('The target industry for the ASOs.'),
+  context: z.string().optional().describe('Optional context for the ASOs, like target country or industry.'),
 });
 export type GenerateAsosInput = z.infer<typeof GenerateAsosInputSchema>;
 
@@ -45,7 +44,7 @@ const prompt = ai.definePrompt({
   output: {schema: GenerateAsosOutputSchema},
   prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs.
 
-  Based on the provided training documents, target country, and industry, generate tailored ASOs.
+  Based on the provided training documents and optional context, generate tailored ASOs.
   If there are any ambiguities or gaps in the provided information, generate a list of clarifying questions.
 
   Training Documents:
@@ -53,8 +52,9 @@ const prompt = ai.definePrompt({
   {{{media url=this}}}
   {{/each}}
 
-  Target Country: {{{country}}}
-  Target Industry: {{{industry}}}
+  {{#if context}}
+  Context: {{{context}}}
+  {{/if}}
 
   Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes. If clarification is needed, use clarificationQuestions.
   `,

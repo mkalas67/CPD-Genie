@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ASO Assist',
-  description: 'AI-powered generation of Aims, Skills, and Outcomes',
+  title: 'Course Genie',
+  description: 'Instantly generate Aims, Skills, and Outcomes for your course.',
 };
 
 export default function RootLayout({
@@ -13,13 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=PT+Sans:wght@400;700&family=Source+Code+Pro&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-body antialiased">
+    <html lang="en">
+      <body className="antialiased">
         {children}
         <Toaster />
       </body>
