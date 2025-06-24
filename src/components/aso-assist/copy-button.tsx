@@ -24,16 +24,16 @@ export function CopyButton({ textToCopy }: CopyButtonProps) {
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button 
-                    variant="ghost" 
+                    variant="default" 
                     size="icon" 
                     onClick={handleCopy} 
-                    className="text-accent hover:text-accent h-8 w-8 shrink-0"
+                    className="h-9 w-9 shrink-0"
                 >
-                    {isCopied ? <Check className="text-green-500" /> : <ClipboardCopy />}
+                    {isCopied ? <Check /> : <ClipboardCopy />}
                 </Button>
             </TooltipTrigger>
             <TooltipContent>
-                <p>Copy to clipboard</p>
+                <p>{isCopied ? 'Copied!' : 'Copy to clipboard'}</p>
             </TooltipContent>
         </Tooltip>
     </TooltipProvider>
