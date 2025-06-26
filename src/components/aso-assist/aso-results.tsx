@@ -1,5 +1,4 @@
 import type { GenerateAsosOutput } from '@/ai/flows/generate-asos';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wand2 } from 'lucide-react';
 import { CopyButton } from './copy-button';
 
@@ -16,19 +15,19 @@ export default function AsoResults({ asoData }: AsoResultsProps) {
     const textToCopy = items.join('\n');
 
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="text-xl font-bold">{title}</CardTitle>
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xl font-bold">{title}</h3>
           <CopyButton textToCopy={textToCopy} />
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-            {items.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="bg-secondary p-6 rounded-lg">
+            <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
+              {items.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+        </div>
+      </div>
     );
   };
 
@@ -44,7 +43,7 @@ export default function AsoResults({ asoData }: AsoResultsProps) {
         </p>
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-6">
         <Section title="Aims" items={aims} />
         <Section title="Skills" items={skills} />
         <Section title="Outcomes" items={outcomes} />
