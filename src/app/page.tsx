@@ -58,7 +58,7 @@ export default function Home() {
       <div className="flex-grow container mx-auto max-w-3xl px-4 py-12 sm:py-16 flex flex-col">
         <header className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground">
-                Course Genie
+                CPD Genie
             </h1>
             <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
                 Instantly generate Aims, Skills, and Outcomes for your course.
