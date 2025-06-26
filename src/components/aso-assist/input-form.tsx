@@ -15,20 +15,26 @@ type InputFormProps = {
 export default function InputForm({ action, isPending }: InputFormProps) {
   const [files, setFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileChange = (newFiles: FileList | null) => {
     if (newFiles) {
       const newFilesArray = Array.from(newFiles);
-      setFiles(prevFiles => [...prevFiles, ...newFilesArray].slice(0, 5)); // Limit to 5 files
+      // Combine with existing files, but prevent duplicates and respect the limit.
+      const combined = [...files, ...newFilesArray];
+      const uniqueFiles = combined.filter(
+        (file, index, self) =>
+          index === self.findIndex((f) => f.name === file.name && f.size === file.size)
+      );
+      setFiles(uniqueFiles.slice(0, 5)); // Limit to 5 files
     }
   };
 
   const removeFile = (index: number) => {
     setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      // Reset file input to allow re-selecting the same file if needed
+      fileInputRef.current.value = ""; 
     }
   };
 
@@ -56,9 +62,11 @@ export default function InputForm({ action, isPending }: InputFormProps) {
     }
   };
 
-  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+  const formActionWithFiles = (formData: FormData) => {
+    // The `files` state is the source of truth.
+    // Clear any documents from the FormData that came from the raw input
+    // and append the ones from our state.
+    formData.delete('documents');
     files.forEach(file => {
       formData.append('documents', file);
     });
@@ -67,7 +75,7 @@ export default function InputForm({ action, isPending }: InputFormProps) {
 
   return (
     <div className="bg-card p-6 sm:p-8 rounded-lg shadow-sm border">
-      <form ref={formRef} onSubmit={handleFormSubmit} className="space-y-8">
+      <form action={formActionWithFiles} className="space-y-8">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Create Your Course Outline</h2>
           <p className="text-muted-foreground mt-1">
@@ -95,6 +103,7 @@ export default function InputForm({ action, isPending }: InputFormProps) {
               <input
                 type="file"
                 ref={fileInputRef}
+                name="documents" // Give it a name to be included in FormData
                 onChange={(e) => handleFileChange(e.target.files)}
                 className="hidden"
                 accept=".pdf,.docx,.doc,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
