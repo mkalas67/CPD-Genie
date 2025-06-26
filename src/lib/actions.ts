@@ -23,12 +23,18 @@ const fileSchema = z
     'Invalid file type. Please upload PDF, DOCX, TXT, or MD files.'
   );
 
+const refinementSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+});
+  
 const formSchema = z.object({
   context: z.string().optional(),
   documents: z
     .array(fileSchema)
     .min(1, 'At least one document is required.')
     .max(5, 'You can upload a maximum of 5 documents.'),
+  refinements: z.array(refinementSchema).optional(),
 });
 
 type ActionState = {
@@ -53,33 +59,48 @@ export async function handleGenerateAsos(
   formData: FormData
 ): Promise<ActionState> {
   try {
-    const rawFormData = {
-      context: formData.get('context') as string,
-      documents: formData.getAll('documents') as File[],
-    };
+    const documents = formData.getAll('documents') as File[];
+    const context = formData.get('context') as string;
 
-    const validatedFields = formSchema.safeParse(rawFormData);
+    const refinements: { question: string, answer: string }[] = [];
+    let i = 0;
+    while (formData.has(`question_${i}`)) {
+      const question = formData.get(`question_${i}`) as string;
+      const answer = formData.get(`answer_${i}`) as string;
+      if (answer?.trim()) {
+        refinements.push({ question, answer: answer.trim() });
+      }
+      i++;
+    }
+
+    const validatedFields = formSchema.safeParse({
+      context,
+      documents,
+      refinements: refinements.length > 0 ? refinements : undefined,
+    });
+
     if (!validatedFields.success) {
       const errorMessages = validatedFields.error.errors.map(e => `${e.path.join('.')} Error: ${e.message}`).join(' ');
       return { error: errorMessages };
     }
 
-    const { context, documents } = validatedFields.data;
+    const { context: validatedContext, documents: validatedDocuments, refinements: validatedRefinements } = validatedFields.data;
 
     const documentDataURIs = await Promise.all(
-      documents.map(file => fileToDataURI(file))
+      validatedDocuments.map(file => fileToDataURI(file))
     );
 
     const result = await generateAsos({
       documents: documentDataURIs,
-      context,
+      context: validatedContext,
+      refinements: validatedRefinements,
     });
 
     return {
       data: result,
       input: {
-        context,
-        docCount: documents.length,
+        context: validatedContext,
+        docCount: validatedDocuments.length,
       },
     };
   } catch (e: any) {

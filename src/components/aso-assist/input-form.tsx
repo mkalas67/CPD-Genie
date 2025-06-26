@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, DragEvent } from 'react';
+import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -8,14 +8,14 @@ import { Loader2, UploadCloud, FileText, X, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type InputFormProps = {
-  action: (formData: FormData) => void;
   isPending: boolean;
+  files: File[];
+  setFiles: React.Dispatch<React.SetStateAction<File[]>>;
 };
 
-export default function InputForm({ action, isPending }: InputFormProps) {
-  const [files, setFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+export default function InputForm({ isPending, files, setFiles }: InputFormProps) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = React.useState(false);
 
   const handleFileChange = (newFiles: FileList | null) => {
     if (newFiles) {
@@ -38,21 +38,21 @@ export default function InputForm({ action, isPending }: InputFormProps) {
     }
   };
 
-  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   };
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   };
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
   };
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -62,20 +62,9 @@ export default function InputForm({ action, isPending }: InputFormProps) {
     }
   };
 
-  const formActionWithFiles = (formData: FormData) => {
-    // The `files` state is the source of truth.
-    // Clear any documents from the FormData that came from the raw input
-    // and append the ones from our state.
-    formData.delete('documents');
-    files.forEach(file => {
-      formData.append('documents', file);
-    });
-    action(formData);
-  };
-
   return (
     <div className="bg-card p-6 sm:p-8 rounded-lg shadow-sm border">
-      <form action={formActionWithFiles} className="space-y-8">
+      <div className="space-y-8">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Create Your Course Outline</h2>
           <p className="text-muted-foreground mt-1">
@@ -103,7 +92,7 @@ export default function InputForm({ action, isPending }: InputFormProps) {
               <input
                 type="file"
                 ref={fileInputRef}
-                name="documents" // Give it a name to be included in FormData
+                name="documents" // This name is for semantics, but files are handled in page.tsx
                 onChange={(e) => handleFileChange(e.target.files)}
                 className="hidden"
                 accept=".pdf,.docx,.doc,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
@@ -155,7 +144,7 @@ export default function InputForm({ action, isPending }: InputFormProps) {
             </>
           )}
         </Button>
-      </form>
+      </div>
     </div>
   );
 }

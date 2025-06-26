@@ -12,6 +12,11 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {clarifyAmbiguities} from './clarify-ambiguities';
 
+const RefinementSchema = z.object({
+  question: z.string(),
+  answer: z.string(),
+});
+
 const GenerateAsosInputSchema = z.object({
   documents: z
     .array(z.string())
@@ -19,6 +24,7 @@ const GenerateAsosInputSchema = z.object({
       'An array of training documents, each as a data URI that must include a MIME type and use Base64 encoding. Expected format: data:<mimetype>;base64,<encoded_data>.'
     ),
   context: z.string().optional().describe('Optional context for the ASOs, like target country or industry.'),
+  refinements: z.array(RefinementSchema).optional().describe('User answers to clarification questions for refining ASOs.'),
 });
 export type GenerateAsosInput = z.infer<typeof GenerateAsosInputSchema>;
 
@@ -57,6 +63,14 @@ const prompt = ai.definePrompt({
   Context: {{{context}}}
   {{/if}}
 
+  {{#if refinements}}
+  The user has provided the following answers to clarification questions. Use this information to refine the ASOs:
+  {{#each refinements}}
+  Question: {{this.question}}
+  Answer: {{this.answer}}
+  {{/each}}
+  {{/if}}
+
   Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes.
   `,
 });
@@ -68,10 +82,23 @@ const generateAsosFlow = ai.defineFlow(
     outputSchema: GenerateAsosOutputSchema,
   },
   async input => {
-    // Run ASO generation and ambiguity clarification in parallel
+    // If we are refining, we don't need to ask for more clarifications.
+    if (input.refinements && input.refinements.length > 0) {
+      const asosResult = await prompt(input);
+      const asos = asosResult.output;
+      if (!asos) {
+        throw new Error('Failed to generate ASOs.');
+      }
+      return {
+        ...asos,
+        clarificationQuestions: [], // No new questions in refinement step
+      };
+    }
+    
+    // First step: Run ASO generation and ambiguity clarification in parallel
     const [asosResult, clarificationResult] = await Promise.all([
       prompt(input),
-      clarifyAmbiguities(input),
+      clarifyAmbiguities({documents: input.documents, context: input.context}),
     ]);
 
     const asos = asosResult.output;
