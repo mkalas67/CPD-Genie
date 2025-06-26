@@ -43,22 +43,22 @@ export default function Home() {
   );
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="container mx-auto max-w-3xl px-4 py-12 sm:py-16">
+    <main className="min-h-screen bg-background text-foreground flex flex-col">
+      <div className="flex-grow container mx-auto max-w-3xl px-4 py-12 sm:py-16 flex flex-col">
         <header className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground">
-                CPD Genie
+                Course Genie
             </h1>
             <p className="mt-3 max-w-2xl mx-auto text-lg text-muted-foreground">
                 Instantly generate Aims, Skills, and Outcomes for your course.
             </p>
         </header>
 
-        <div className="mt-8">
+        <div className="mt-8 flex-grow flex items-center justify-center">
             {isPending ? (
                 <LoadingState />
             ) : state.data || state.error ? (
-                <div className="space-y-6">
+                <div className="w-full space-y-6">
                     {state.error && <ErrorDisplay error={state.error} />}
 
                     {state.data && (
@@ -79,10 +79,15 @@ export default function Home() {
                     </Button>
                 </div>
             ) : (
-                <InputForm action={formAction} isPending={isPending} />
+                <div className="w-full">
+                  <InputForm action={formAction} isPending={isPending} />
+                </div>
             )}
         </div>
       </div>
+      <footer className="text-center p-4 text-sm text-muted-foreground">
+        Powered by Firebase and Google AI
+      </footer>
     </main>
   );
 }
