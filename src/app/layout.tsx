@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Course Genie',
+  title: 'CPD Genie',
   description: 'Instantly generate Aims, Skills, and Outcomes for your course.',
 };
 
