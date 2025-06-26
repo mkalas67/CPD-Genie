@@ -15,8 +15,12 @@ import {z} from 'genkit';
 
 // Define the input schema
 const ClarifyAmbiguitiesInputSchema = z.object({
-  documents: z.array(z.string()).describe('List of document content strings.'),
-  context: z.string().describe('Context information including target country and industry for the ASOs.'),
+  documents: z
+    .array(z.string())
+    .describe(
+      'An array of training documents, each as a data URI that must include a MIME type and use Base64 encoding. Expected format: data:<mimetype>;base64,<encoded_data>.'
+    ),
+  context: z.string().optional().describe('Context information including target country and industry for the ASOs.'),
 });
 export type ClarifyAmbiguitiesInput = z.infer<typeof ClarifyAmbiguitiesInputSchema>;
 
@@ -40,10 +44,14 @@ const clarifyAmbiguitiesPrompt = ai.definePrompt({
 
   Analyze the following documents and context information:
 
-  Documents:{{#each documents}}{{{this}}}
-{{/each}}
+  Documents:
+  {{#each documents}}
+  {{{media url=this}}}
+  {{/each}}
 
+  {{#if context}}
   Context: {{{context}}}
+  {{/if}}
 
   Identify any areas where the information is unclear, incomplete, or contradictory. Generate a list of clarifying questions that would help to resolve these ambiguities and ensure the generated ASOs are accurate and relevant. Only include questions related to ambiguities that can reasonably be resolved by the user.
 

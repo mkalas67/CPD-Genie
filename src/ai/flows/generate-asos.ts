@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import {clarifyAmbiguities} from './clarify-ambiguities';
 
 const GenerateAsosInputSchema = z.object({
   documents: z
@@ -21,12 +22,13 @@ const GenerateAsosInputSchema = z.object({
 });
 export type GenerateAsosInput = z.infer<typeof GenerateAsosInputSchema>;
 
-const GenerateAsosOutputSchema = z.object({
+const AsoGenerationSchema = z.object({
   aims: z.array(z.string()).describe('A list of aims for the training program.'),
   skills: z.array(z.string()).describe('A list of skills to be gained from the training program.'),
-  outcomes: z
-    .array(z.string())
-    .describe('A list of outcomes expected from the training program.'),
+  outcomes: z.array(z.string()).describe('A list of outcomes expected from the training program.'),
+});
+
+const GenerateAsosOutputSchema = AsoGenerationSchema.extend({
   clarificationQuestions: z
     .array(z.string())
     .optional()
@@ -41,11 +43,10 @@ export async function generateAsos(input: GenerateAsosInput): Promise<GenerateAs
 const prompt = ai.definePrompt({
   name: 'generateAsosPrompt',
   input: {schema: GenerateAsosInputSchema},
-  output: {schema: GenerateAsosOutputSchema},
+  output: {schema: AsoGenerationSchema},
   prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs.
 
   Based on the provided training documents and optional context, generate tailored ASOs.
-  If there are any ambiguities or gaps in the provided information, generate a list of clarifying questions.
 
   Training Documents:
   {{#each documents}}
@@ -56,7 +57,7 @@ const prompt = ai.definePrompt({
   Context: {{{context}}}
   {{/if}}
 
-  Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes. If clarification is needed, use clarificationQuestions.
+  Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes.
   `,
 });
 
@@ -67,7 +68,20 @@ const generateAsosFlow = ai.defineFlow(
     outputSchema: GenerateAsosOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    // Run ASO generation and ambiguity clarification in parallel
+    const [asosResult, clarificationResult] = await Promise.all([
+      prompt(input),
+      clarifyAmbiguities(input),
+    ]);
+
+    const asos = asosResult.output;
+    if (!asos) {
+      throw new Error('Failed to generate ASOs.');
+    }
+
+    return {
+      ...asos,
+      clarificationQuestions: clarificationResult.questions,
+    };
   }
 );
