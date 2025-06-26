@@ -21,7 +21,7 @@ export default function AsoResults({ asoData }: AsoResultsProps) {
           <CopyButton textToCopy={textToCopy} />
         </div>
         <div className="bg-secondary p-6 rounded-lg">
-            <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
+            <ul className="list-disc space-y-2 pl-5 text-foreground">
               {items.map((item, index) => (
                 <li key={index}>{item}</li>
               ))}

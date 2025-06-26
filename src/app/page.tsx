@@ -62,14 +62,15 @@ export default function Home() {
                     {state.error && <ErrorDisplay error={state.error} />}
 
                     {state.data && (
-                        <div className="space-y-6">
-                            {state.data.clarificationQuestions && state.data.clarificationQuestions.length > 0 && (
-                                <ClarificationQuestions questions={state.data.clarificationQuestions} />
-                            )}
+                        <div className="space-y-8">
                             {state.data.aims?.length || state.data.skills?.length || state.data.outcomes?.length ? (
                               <AsoResults asoData={state.data} />
                             ) : (
                                 !state.error && <p className="text-center text-muted-foreground">The model did not return any ASOs. Please try refining your input.</p>
+                            )}
+                            
+                            {state.data.clarificationQuestions && state.data.clarificationQuestions.length > 0 && (
+                                <ClarificationQuestions questions={state.data.clarificationQuestions} />
                             )}
                         </div>
                     )}
