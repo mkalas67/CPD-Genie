@@ -26,7 +26,7 @@ export type ClarifyAmbiguitiesInput = z.infer<typeof ClarifyAmbiguitiesInputSche
 
 // Define the output schema
 const ClarifyAmbiguitiesOutputSchema = z.object({
-  questions: z.array(z.string()).describe('List of clarifying questions to ask the user.'),
+  questions: z.array(z.string()).max(3).describe('List of clarifying questions to ask the user. Maximum of 3 questions.'),
 });
 export type ClarifyAmbiguitiesOutput = z.infer<typeof ClarifyAmbiguitiesOutputSchema>;
 
@@ -53,7 +53,7 @@ const clarifyAmbiguitiesPrompt = ai.definePrompt({
   Context: {{{context}}}
   {{/if}}
 
-  Identify any areas where the information is unclear, incomplete, or contradictory. Generate a list of clarifying questions that would help to resolve these ambiguities and ensure the generated ASOs are accurate and relevant. Only include questions related to ambiguities that can reasonably be resolved by the user.
+  Identify any areas where the information is unclear, incomplete, or contradictory. Generate a list of clarifying questions that would help to resolve these ambiguities and ensure the generated ASOs are accurate and relevant. Only include questions related to ambiguities that can reasonably be resolved by the user. Generate a maximum of 3 questions.
 
   Format the output as a JSON object with a "questions" field containing an array of strings representing the clarifying questions.
 

@@ -33,16 +33,16 @@ export default function Home() {
 
   const wrappedAction = (formData: FormData) => {
     // The `files` state is the source of truth for documents.
-    formData.delete('documents');
-    files.forEach(file => {
-      formData.append('documents', file);
-    });
+    // If we are refining, we still need the original files.
+    if (files.length > 0) {
+      formData.delete('documents');
+      files.forEach(file => {
+        formData.append('documents', file);
+      });
+    }
     formAction(formData);
   };
   
-  const showRefineForm = state.data?.clarificationQuestions && state.data.clarificationQuestions.length > 0;
-  const showResults = state.data && !showRefineForm;
-
   const ErrorDisplay = ({ error }: { error: string }) => (
     <Alert variant="destructive" className="bg-red-500/5 border-red-500/20 text-red-700 dark:bg-red-950/20 dark:border-red-500/20 dark:text-red-500">
         <AlertCircle className="h-4 w-4" />
@@ -77,19 +77,26 @@ export default function Home() {
                         Start Over
                     </Button>
                 </div>
-            ) : showRefineForm ? (
-                <RefineForm 
-                  questions={state.data.clarificationQuestions!}
-                  isPending={isPending}
-                  context={state.input?.context}
-                />
-            ) : showResults ? (
+            ) : state.data ? (
                 <div className="w-full space-y-6">
                   <AsoResults asoData={state.data} />
-                   <Button onClick={handleStartOver} variant="outline" className="w-full !mt-8">
+
+                  {state.data.clarificationQuestions && state.data.clarificationQuestions.length > 0 && (
+                    <RefineForm 
+                      questions={state.data.clarificationQuestions}
+                      isPending={isPending}
+                      context={state.input?.context}
+                    />
+                  )}
+                  
+                  {/* The refine form has its own submit button, so we don't need a general one here. 
+                      But we do want a consistent "Start Over" button. */}
+                  {(!state.data.clarificationQuestions || state.data.clarificationQuestions.length === 0) && (
+                     <Button onClick={handleStartOver} variant="outline" className="w-full !mt-8">
                         <RefreshCw className="mr-2" />
                         Start Over
                     </Button>
+                  )}
                 </div>
             ) : (
                 <div className="w-full">
