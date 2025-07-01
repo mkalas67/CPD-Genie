@@ -1,6 +1,9 @@
-export type AnalyticsLog = {
-  timestamp: string;
-  country: string;
-  industry: string;
+export type Generation = {
+  id: string;
+  aims: string[];
+  skills: string[];
+  outcomes: string[];
+  context?: string;
   docCount: number;
+  createdAt: Date;
 };

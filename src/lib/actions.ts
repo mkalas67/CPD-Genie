@@ -3,6 +3,9 @@
 import { generateAsos } from '@/ai/flows/generate-asos';
 import { z } from 'zod';
 import type { GenerateAsosOutput } from '@/ai/flows/generate-asos';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { revalidatePath } from 'next/cache';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = [
@@ -95,6 +98,19 @@ export async function handleGenerateAsos(
       context: validatedContext,
       refinements: validatedRefinements,
     });
+
+    // Save to Firestore on successful generation without refinements
+    if (result.aims.length > 0 && (!validatedRefinements || validatedRefinements.length === 0)) {
+        await addDoc(collection(db, 'generations'), {
+            aims: result.aims,
+            skills: result.skills,
+            outcomes: result.outcomes,
+            context: validatedContext || '',
+            docCount: validatedDocuments.length,
+            createdAt: serverTimestamp(),
+        });
+        revalidatePath('/'); // Revalidate the page to show the new history item
+    }
 
     return {
       data: result,
