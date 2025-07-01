@@ -1,5 +1,5 @@
 import type { GenerateAsosOutput } from '@/ai/flows/generate-asos';
-import { Wand2 } from 'lucide-react';
+import { Wand2, Clock } from 'lucide-react';
 import { CopyButton } from './copy-button';
 
 type AsoResultsProps = {
@@ -7,7 +7,7 @@ type AsoResultsProps = {
 };
 
 export default function AsoResults({ asoData }: AsoResultsProps) {
-  const { aims, skills, outcomes } = asoData;
+  const { aims, skills, outcomes, cpdHours } = asoData;
 
   const Section = ({ title, items }: { title: string; items: string[] | undefined }) => {
     if (!items || items.length === 0) return null;
@@ -42,6 +42,16 @@ export default function AsoResults({ asoData }: AsoResultsProps) {
           Here are the suggested ASOs for your course material. You can copy each section to your clipboard.
         </p>
       </div>
+      
+      {typeof cpdHours === 'number' && (
+        <div className="flex items-center justify-center gap-3 rounded-lg border bg-card p-4 text-center shadow-sm">
+          <Clock className="h-8 w-8 text-primary" />
+          <div>
+            <p className="text-sm text-muted-foreground">Estimated CPD Hours</p>
+            <p className="text-3xl font-bold text-foreground">{cpdHours}</p>
+          </div>
+        </div>
+      )}
       
       <div className="space-y-6">
         <Section title="Aims" items={aims} />

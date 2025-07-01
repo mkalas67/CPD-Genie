@@ -12,7 +12,6 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/msword',
   'text/plain',
   'text/markdown',
 ];
@@ -122,6 +121,7 @@ export async function handleGenerateAsos(
             aims: result.aims,
             skills: result.skills,
             outcomes: result.outcomes,
+            cpdHours: result.cpdHours,
             context: validatedContext || '',
             docCount: validatedDocuments?.length || 0,
             description: validatedCourseDescription || '',

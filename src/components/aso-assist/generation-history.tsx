@@ -3,7 +3,7 @@ import { collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
 import type { Generation } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { History, FileText, Globe, Type } from 'lucide-react';
+import { History, FileText, Globe, Type, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 async function getHistory(): Promise<Generation[]> {
@@ -77,6 +77,12 @@ export default async function GenerationHistory() {
                                             <div className="flex items-center gap-1 text-muted-foreground">
                                                 <Type size={16} />
                                                 <span className="truncate max-w-[150px]">Text Input</span>
+                                            </div>
+                                        )}
+                                        {typeof item.cpdHours === 'number' && item.cpdHours > 0 && (
+                                            <div className="flex items-center gap-1 text-muted-foreground">
+                                                <Clock size={16} />
+                                                <span>{item.cpdHours} hr(s)</span>
                                             </div>
                                         )}
                                         {item.context && (

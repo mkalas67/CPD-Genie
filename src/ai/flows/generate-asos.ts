@@ -34,6 +34,11 @@ const AsoGenerationSchema = z.object({
   aims: z.array(z.string()).describe('A list of aims for the training program.'),
   skills: z.array(z.string()).describe('A list of skills to be gained from the training program.'),
   outcomes: z.array(z.string()).describe('A list of outcomes expected from the training program.'),
+  cpdHours: z
+    .number()
+    .describe(
+      'The estimated Continuing Professional Development (CPD) hours for the course based on the provided material. This should be a single numerical value.'
+    ),
 });
 
 const GenerateAsosOutputSchema = AsoGenerationSchema.extend({
@@ -52,9 +57,9 @@ const prompt = ai.definePrompt({
   name: 'generateAsosPrompt',
   input: {schema: GenerateAsosInputSchema},
   output: {schema: AsoGenerationSchema},
-  prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs.
+  prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs. You are also skilled at estimating Continuing Professional Development (CPD) hours.
 
-  Based on the provided information, generate tailored ASOs.
+  Based on the provided information, generate tailored ASOs. Also, provide an estimate for the CPD hours. The CPD hours should be a single number representing the total estimated time for the course.
 
   {{#if documents}}
   Training Documents:
@@ -80,7 +85,7 @@ const prompt = ai.definePrompt({
   {{/each}}
   {{/if}}
 
-  Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes.
+  Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes. Include the estimated CPD hours as a numerical value.
   `,
 });
 
@@ -103,14 +108,14 @@ const generateAsosFlow = ai.defineFlow(
         clarificationQuestions: [], // No new questions in refinement step
       };
     }
-    
+
     // First step: Run ASO generation and ambiguity clarification in parallel
     const [asosResult, clarificationResult] = await Promise.all([
       prompt(input),
       clarifyAmbiguities({
         documents: input.documents,
         courseDescription: input.courseDescription,
-        context: input.context
+        context: input.context,
       }),
     ]);
 
