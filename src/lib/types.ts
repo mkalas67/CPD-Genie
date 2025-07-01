@@ -5,5 +5,6 @@ export type Generation = {
   outcomes: string[];
   context?: string;
   docCount: number;
+  description?: string;
   createdAt: Date;
 };

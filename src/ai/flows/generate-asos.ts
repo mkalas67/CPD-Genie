@@ -20,9 +20,11 @@ const RefinementSchema = z.object({
 const GenerateAsosInputSchema = z.object({
   documents: z
     .array(z.string())
+    .optional()
     .describe(
       'An array of training documents, each as a data URI that must include a MIME type and use Base64 encoding. Expected format: data:<mimetype>;base64,<encoded_data>.'
     ),
+  courseDescription: z.string().optional().describe('A detailed description of the course.'),
   context: z.string().optional().describe('Optional context for the ASOs, like target country or industry.'),
   refinements: z.array(RefinementSchema).optional().describe('User answers to clarification questions for refining ASOs.'),
 });
@@ -52,12 +54,19 @@ const prompt = ai.definePrompt({
   output: {schema: AsoGenerationSchema},
   prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs.
 
-  Based on the provided training documents and optional context, generate tailored ASOs.
+  Based on the provided information, generate tailored ASOs.
 
+  {{#if documents}}
   Training Documents:
   {{#each documents}}
   {{{media url=this}}}
   {{/each}}
+  {{/if}}
+
+  {{#if courseDescription}}
+  Course Description:
+  {{{courseDescription}}}
+  {{/if}}
 
   {{#if context}}
   Context: {{{context}}}
@@ -98,7 +107,11 @@ const generateAsosFlow = ai.defineFlow(
     // First step: Run ASO generation and ambiguity clarification in parallel
     const [asosResult, clarificationResult] = await Promise.all([
       prompt(input),
-      clarifyAmbiguities({documents: input.documents, context: input.context}),
+      clarifyAmbiguities({
+        documents: input.documents,
+        courseDescription: input.courseDescription,
+        context: input.context
+      }),
     ]);
 
     const asos = asosResult.output;

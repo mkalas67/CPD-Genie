@@ -3,7 +3,7 @@ import { collection, getDocs, orderBy, query, limit } from 'firebase/firestore';
 import type { Generation } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { History, FileText, Globe } from 'lucide-react';
+import { History, FileText, Globe, Type } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 async function getHistory(): Promise<Generation[]> {
@@ -67,10 +67,18 @@ export default async function GenerationHistory() {
                             <AccordionTrigger>
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full pr-4">
                                     <div className="flex items-center gap-3 text-left">
-                                        <div className="flex items-center gap-1 text-muted-foreground">
-                                            <FileText size={16} />
-                                            <span>{item.docCount} file(s)</span>
-                                        </div>
+                                        {item.docCount > 0 && (
+                                            <div className="flex items-center gap-1 text-muted-foreground">
+                                                <FileText size={16} />
+                                                <span>{item.docCount} file(s)</span>
+                                            </div>
+                                        )}
+                                        {item.description && (
+                                            <div className="flex items-center gap-1 text-muted-foreground">
+                                                <Type size={16} />
+                                                <span className="truncate max-w-[150px]">Text Input</span>
+                                            </div>
+                                        )}
                                         {item.context && (
                                             <div className="hidden sm:flex items-center gap-1 text-muted-foreground">
                                                 <Globe size={16} />

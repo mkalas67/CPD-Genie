@@ -17,9 +17,11 @@ import {z} from 'genkit';
 const ClarifyAmbiguitiesInputSchema = z.object({
   documents: z
     .array(z.string())
+    .optional()
     .describe(
       'An array of training documents, each as a data URI that must include a MIME type and use Base64 encoding. Expected format: data:<mimetype>;base64,<encoded_data>.'
     ),
+  courseDescription: z.string().optional().describe('A detailed description of the course.'),
   context: z.string().optional().describe('Context information including target country and industry for the ASOs.'),
 });
 export type ClarifyAmbiguitiesInput = z.infer<typeof ClarifyAmbiguitiesInputSchema>;
@@ -42,12 +44,19 @@ const clarifyAmbiguitiesPrompt = ai.definePrompt({
   output: {schema: ClarifyAmbiguitiesOutputSchema},
   prompt: `You are an AI assistant designed to identify ambiguities or gaps in user-provided documents and context information for ASO (Aims, Skills, Outcomes) generation.
 
-  Analyze the following documents and context information:
+  Analyze the following information:
 
+  {{#if documents}}
   Documents:
   {{#each documents}}
   {{{media url=this}}}
   {{/each}}
+  {{/if}}
+
+  {{#if courseDescription}}
+  Course Description:
+  {{{courseDescription}}}
+  {{/if}}
 
   {{#if context}}
   Context: {{{context}}}

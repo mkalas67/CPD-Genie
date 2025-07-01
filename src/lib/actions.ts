@@ -12,7 +12,6 @@ const ALLOWED_FILE_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'application/msword',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'text/plain',
   'text/markdown',
 ];
@@ -35,10 +34,20 @@ const formSchema = z.object({
   context: z.string().optional(),
   documents: z
     .array(fileSchema)
-    .min(1, 'At least one document is required.')
-    .max(5, 'You can upload a maximum of 5 documents.'),
+    .max(5, 'You can upload a maximum of 5 documents.')
+    .optional(),
+  courseDescription: z
+    .string()
+    .max(5000, 'Course description cannot exceed 5000 characters.')
+    .optional(),
   refinements: z.array(refinementSchema).optional(),
-});
+}).refine(
+    (data) => (data.documents && data.documents.length > 0) || !!data.courseDescription,
+    {
+      message: 'Either course material or a description must be provided.',
+      path: ['documents'], // Assign error to a field for display
+    }
+  );
 
 type ActionState = {
   data?: GenerateAsosOutput;
@@ -62,8 +71,10 @@ export async function handleGenerateAsos(
   formData: FormData
 ): Promise<ActionState> {
   try {
-    const documents = formData.getAll('documents') as File[];
+    // Filter out empty file inputs from the form
+    const documents = (formData.getAll('documents') as File[]).filter(f => f.size > 0);
     const context = formData.get('context') as string;
+    const courseDescription = formData.get('courseDescription') as string;
 
     const refinements: { question: string, answer: string }[] = [];
     let i = 0;
@@ -78,7 +89,8 @@ export async function handleGenerateAsos(
 
     const validatedFields = formSchema.safeParse({
       context,
-      documents,
+      documents: documents.length > 0 ? documents : undefined,
+      courseDescription,
       refinements: refinements.length > 0 ? refinements : undefined,
     });
 
@@ -87,14 +99,15 @@ export async function handleGenerateAsos(
       return { error: errorMessages };
     }
 
-    const { context: validatedContext, documents: validatedDocuments, refinements: validatedRefinements } = validatedFields.data;
+    const { context: validatedContext, documents: validatedDocuments, courseDescription: validatedCourseDescription, refinements: validatedRefinements } = validatedFields.data;
 
-    const documentDataURIs = await Promise.all(
-      validatedDocuments.map(file => fileToDataURI(file))
-    );
+    const documentDataURIs = validatedDocuments 
+      ? await Promise.all(validatedDocuments.map(file => fileToDataURI(file)))
+      : undefined;
 
     const result = await generateAsos({
       documents: documentDataURIs,
+      courseDescription: validatedCourseDescription,
       context: validatedContext,
       refinements: validatedRefinements,
     });
@@ -106,7 +119,8 @@ export async function handleGenerateAsos(
             skills: result.skills,
             outcomes: result.outcomes,
             context: validatedContext || '',
-            docCount: validatedDocuments.length,
+            docCount: validatedDocuments?.length || 0,
+            description: validatedCourseDescription || '',
             createdAt: serverTimestamp(),
         });
         revalidatePath('/'); // Revalidate the page to show the new history item
@@ -116,11 +130,15 @@ export async function handleGenerateAsos(
       data: result,
       input: {
         context: validatedContext,
-        docCount: validatedDocuments.length,
+        docCount: validatedDocuments?.length || 0,
       },
     };
   } catch (e: any) {
     console.error(e);
+    // This is a specific check for a known issue with pdf-parse and Next.js/Webpack
+    if (e.message?.includes("ENOENT: no such file or directory, open './test/data/05-versions-space.pdf'")) {
+      return { error: 'There was an issue processing a PDF file. Please try re-saving the PDF or using a different file.'}
+    }
     return { error: e.message || 'An unexpected error occurred.' };
   }
 }

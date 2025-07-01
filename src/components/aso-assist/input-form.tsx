@@ -16,6 +16,7 @@ type InputFormProps = {
 export default function InputForm({ isPending, files, setFiles }: InputFormProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = React.useState(false);
+  const [courseDescription, setCourseDescription] = React.useState('');
 
   const handleFileChange = (newFiles: FileList | null) => {
     if (newFiles) {
@@ -62,6 +63,8 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
     }
   };
 
+  const isButtonDisabled = isPending || (files.length === 0 && courseDescription.trim() === '');
+
   return (
     <div className="bg-card p-6 sm:p-8 rounded-lg shadow-sm border">
       <div className="space-y-8">
@@ -74,7 +77,7 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Course Material (up to 5 files)</Label>
+            <Label>Course Material (Optional, up to 5 files)</Label>
             <div
               className={cn(
                 "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors",
@@ -92,10 +95,10 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
               <input
                 type="file"
                 ref={fileInputRef}
-                name="documents" // This name is for semantics, but files are handled in page.tsx
+                name="documents"
                 onChange={(e) => handleFileChange(e.target.files)}
                 className="hidden"
-                accept=".pdf,.docx,.doc,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
+                accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
                 multiple
               />
             </div>
@@ -121,6 +124,32 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
           )}
         </div>
 
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card px-2 text-muted-foreground">
+              Or
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="course-description">Describe Your Course (Optional)</Label>
+          <Textarea
+            id="course-description"
+            name="courseDescription"
+            placeholder="e.g., An introductory course on web development covering HTML, CSS, JavaScript, and the basics of React..."
+            className="bg-background"
+            rows={8}
+            maxLength={5000}
+            value={courseDescription}
+            onChange={(e) => setCourseDescription(e.target.value)}
+          />
+           <p className="text-sm text-muted-foreground text-right">{courseDescription.length} / 5000</p>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="context">Target Country and/or Industry (Optional)</Label>
           <Textarea
@@ -131,7 +160,7 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
           />
         </div>
 
-        <Button type="submit" className="w-full" size="lg" disabled={isPending || files.length === 0}>
+        <Button type="submit" className="w-full" size="lg" disabled={isButtonDisabled}>
           {isPending ? (
             <>
               <Loader2 className="animate-spin mr-2" />
