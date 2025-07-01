@@ -7,4 +7,5 @@ export type Generation = {
   docCount: number;
   description?: string;
   createdAt: Date;
+  ip?: string;
 };

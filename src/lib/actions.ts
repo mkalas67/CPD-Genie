@@ -6,6 +6,7 @@ import type { GenerateAsosOutput } from '@/ai/flows/generate-asos';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
+import { headers } from 'next/headers';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_FILE_TYPES = [
@@ -71,6 +72,9 @@ export async function handleGenerateAsos(
   formData: FormData
 ): Promise<ActionState> {
   try {
+    const headersList = headers();
+    const ip = (headersList.get('x-forwarded-for') ?? '127.0.0.1').split(',')[0].trim();
+    
     // Filter out empty file inputs from the form
     const documents = (formData.getAll('documents') as File[]).filter(f => f.size > 0);
     const context = formData.get('context') as string;
@@ -122,6 +126,7 @@ export async function handleGenerateAsos(
             docCount: validatedDocuments?.length || 0,
             description: validatedCourseDescription || '',
             createdAt: serverTimestamp(),
+            ip: ip,
         });
         revalidatePath('/'); // Revalidate the page to show the new history item
     }
