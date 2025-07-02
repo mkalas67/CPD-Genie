@@ -1,4 +1,3 @@
-import GenerationHistory from '@/components/aso-assist/generation-history';
 import GeneratorUI from '@/components/aso-assist/generator-ui';
 
 export default function Page() {
@@ -16,7 +15,6 @@ export default function Page() {
 
         <div className="flex-grow">
           <GeneratorUI />
-          <GenerationHistory />
         </div>
       </div>
       <footer className="text-center p-4 text-sm text-muted-foreground">
