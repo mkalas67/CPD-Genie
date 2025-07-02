@@ -71,13 +71,39 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Create Your Course Outline</h2>
           <p className="text-muted-foreground mt-1">
-            Upload your material, provide context, and let the genie work its magic.
+            Describe your course, provide context, and let the genie work its magic.
           </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="course-description">Describe Your Course (Optional)</Label>
+          <Textarea
+            id="course-description"
+            name="courseDescription"
+            placeholder="e.g., A training module for social care professionals focusing on safeguarding and best practices."
+            className="bg-background"
+            rows={8}
+            maxLength={5000}
+            value={courseDescription}
+            onChange={(e) => setCourseDescription(e.target.value)}
+          />
+           <p className="text-sm text-muted-foreground text-right">{courseDescription.length} / 5000</p>
+        </div>
+
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card px-2 text-muted-foreground">
+              Or
+            </span>
+          </div>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Course Material (Optional, up to 5 files)</Label>
+            <Label>Upload Course Material (Optional, up to 5 files)</Label>
             <div
               className={cn(
                 "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors",
@@ -122,32 +148,6 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
               </ul>
             </div>
           )}
-        </div>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              Or
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="course-description">Describe Your Course (Optional)</Label>
-          <Textarea
-            id="course-description"
-            name="courseDescription"
-            placeholder="e.g., An introductory course on web development covering HTML, CSS, JavaScript, and the basics of React..."
-            className="bg-background"
-            rows={8}
-            maxLength={5000}
-            value={courseDescription}
-            onChange={(e) => setCourseDescription(e.target.value)}
-          />
-           <p className="text-sm text-muted-foreground text-right">{courseDescription.length} / 5000</p>
         </div>
 
         <div className="space-y-2">
