@@ -24,6 +24,7 @@ export function CopyButton({ textToCopy }: CopyButtonProps) {
         <Tooltip>
             <TooltipTrigger asChild>
                 <Button 
+                    type="button"
                     variant="default" 
                     size="icon" 
                     onClick={handleCopy} 

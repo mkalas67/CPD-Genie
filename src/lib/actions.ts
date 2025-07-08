@@ -77,7 +77,7 @@ export async function handleGenerateAsos(
     // Filter out empty file inputs from the form
     const documents = (formData.getAll('documents') as File[]).filter(f => f.size > 0);
     const context = formData.get('context') as string;
-    const courseDescription = formData.get('courseDescription') as string;
+    const courseDescription = formData.get('courseDescription') as string | null;
 
     const refinements: { question: string, answer: string }[] = [];
     let i = 0;
@@ -93,7 +93,7 @@ export async function handleGenerateAsos(
     const validatedFields = formSchema.safeParse({
       context,
       documents: documents.length > 0 ? documents : undefined,
-      courseDescription,
+      courseDescription: courseDescription ?? undefined,
       refinements: refinements.length > 0 ? refinements : undefined,
     });
 

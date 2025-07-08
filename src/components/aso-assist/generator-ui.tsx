@@ -59,7 +59,7 @@ export default function GeneratorUI() {
         ) : state.error ? (
              <div className="w-full space-y-6">
                 <ErrorDisplay error={state.error} />
-                <Button onClick={handleStartOver} variant="outline" className="w-full !mt-8">
+                <Button type="button" onClick={handleStartOver} variant="outline" className="w-full !mt-8">
                     <RefreshCw className="mr-2" />
                     Start Over
                 </Button>
@@ -77,7 +77,7 @@ export default function GeneratorUI() {
               )}
               
               {(!state.data.clarificationQuestions || state.data.clarificationQuestions.length === 0) && (
-                 <Button onClick={handleStartOver} variant="outline" className="w-full !mt-8">
+                 <Button type="button" onClick={handleStartOver} variant="outline" className="w-full !mt-8">
                     <RefreshCw className="mr-2" />
                     Start Over
                 </Button>
