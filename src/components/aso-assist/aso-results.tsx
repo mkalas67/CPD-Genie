@@ -1,5 +1,5 @@
 import type { GenerateAsosOutput } from '@/ai/flows/generate-asos';
-import { Wand2, Clock } from 'lucide-react';
+import { Wand2, Clock, CheckSquare } from 'lucide-react';
 import { CopyButton } from './copy-button';
 
 type AsoResultsProps = {
@@ -7,7 +7,7 @@ type AsoResultsProps = {
 };
 
 export default function AsoResults({ asoData }: AsoResultsProps) {
-  const { aims, skills, outcomes, cpdHours } = asoData;
+  const { aims, skills, outcomes, cpdEstimate, suggestedFrameworks } = asoData;
 
   const Section = ({ title, items }: { title: string; items: string[] | undefined }) => {
     if (!items || items.length === 0) return null;
@@ -23,7 +23,7 @@ export default function AsoResults({ asoData }: AsoResultsProps) {
         <div className="bg-secondary p-6 rounded-lg">
             <ul className="list-disc space-y-2 pl-5 text-foreground">
               {items.map((item, index) => (
-                <li key={index}>{item}</li>
+                <li key={index} className="break-words">{item}</li>
               ))}
             </ul>
         </div>
@@ -43,15 +43,27 @@ export default function AsoResults({ asoData }: AsoResultsProps) {
         </p>
       </div>
       
-      {typeof cpdHours === 'number' && (
-        <div className="flex items-center justify-center gap-3 rounded-lg border bg-card p-4 text-center shadow-sm">
-          <Clock className="h-8 w-8 text-primary" />
-          <div>
-            <p className="text-sm text-muted-foreground">Estimated CPD Hours</p>
-            <p className="text-3xl font-bold text-foreground">{cpdHours}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {cpdEstimate && (
+          <div className="flex items-start gap-4 rounded-lg border bg-card p-4 shadow-sm">
+            <Clock className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+            <div>
+              <p className="font-bold text-foreground">Estimated CPD</p>
+              <p className="text-sm text-muted-foreground">{cpdEstimate}</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+        
+        {suggestedFrameworks && suggestedFrameworks.length > 0 && (
+          <div className="flex items-start gap-4 rounded-lg border bg-card p-4 shadow-sm">
+            <CheckSquare className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+             <div>
+              <p className="font-bold text-foreground">Suggested Frameworks</p>
+              <p className="text-sm text-muted-foreground">{suggestedFrameworks.join(', ')}</p>
+            </div>
+          </div>
+        )}
+      </div>
       
       <div className="space-y-6">
         <Section title="Aims" items={aims} />

@@ -10,12 +10,18 @@ type RefineFormProps = {
   questions: string[];
   isPending: boolean;
   context?: string;
+  courseDescription?: string;
+  suggestedFrameworks?: string[];
 };
 
-export default function RefineForm({ questions, isPending, context }: RefineFormProps) {
+export default function RefineForm({ questions, isPending, context, courseDescription, suggestedFrameworks }: RefineFormProps) {
   if (!questions || questions.length === 0) {
     return null;
   }
+  
+  const frameworkQuestion = suggestedFrameworks && suggestedFrameworks.length > 0 
+    ? `Would you like me to align the ASOs using a formal framework such as ${suggestedFrameworks.join(' or ')}? This may help with recognition by clients or employers.`
+    : null;
 
   return (
     <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 sm:p-8 w-full">
@@ -32,8 +38,25 @@ export default function RefineForm({ questions, isPending, context }: RefineForm
       </div>
     
       <div className="space-y-8">
-          {/* Pass original context so it's included in refinement submission */}
+          {/* Pass original context and description so it's included in refinement submission */}
           {context && <input type="hidden" name="context" value={context} />}
+          {courseDescription && <input type="hidden" name="courseDescription" value={courseDescription} />}
+          
+          {frameworkQuestion && (
+             <div className="space-y-3">
+              <Label htmlFor={`answer_framework`} className="font-medium text-foreground">
+                {frameworkQuestion}
+              </Label>
+              <input type="hidden" name={`question_framework`} value={frameworkQuestion} />
+              <Textarea
+                id={`answer_framework`}
+                name={`answer_framework`}
+                placeholder="Your answer..."
+                className="bg-background"
+                rows={2}
+              />
+            </div>
+          )}
 
           {questions.map((question, index) => (
             <div key={index} className="space-y-3">

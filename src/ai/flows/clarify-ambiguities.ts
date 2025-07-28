@@ -2,10 +2,10 @@
 'use server';
 
 /**
- * @fileOverview This file defines a Genkit flow for clarifying ambiguities or gaps in user-provided information
- *  for ASO (Aims, Skills, Outcomes) generation. This ensures the generated ASOs are accurate and relevant.
+ * @fileOverview This file defines a Genkit flow for asking targeted follow-up questions to clarify
+ * missing information for ASO (Aims, Skills, Outcomes) generation.
  *
- * - clarifyAmbiguities - The main function to trigger the ambiguity clarification flow.
+ * - clarifyAmbiguities - The main function to trigger the clarification flow.
  * - ClarifyAmbiguitiesInput - The input type for the clarifyAmbiguities function.
  * - ClarifyAmbiguitiesOutput - The output type for the clarifyAmbiguities function.
  */
@@ -19,16 +19,16 @@ const ClarifyAmbiguitiesInputSchema = z.object({
     .array(z.string())
     .optional()
     .describe(
-      'An array of training documents, each as a data URI that must include a MIME type and use Base64 encoding. Expected format: data:<mimetype>;base64,<encoded_data>.'
+      'An array of training documents, each as a data URI. Expected format: data:<mimetype>;base64,<encoded_data>.'
     ),
   courseDescription: z.string().optional().describe('A detailed description of the course.'),
-  context: z.string().optional().describe('Context information including target country and industry for the ASOs.'),
+  context: z.string().optional().describe('Context information including target country and industry.'),
 });
 export type ClarifyAmbiguitiesInput = z.infer<typeof ClarifyAmbiguitiesInputSchema>;
 
 // Define the output schema
 const ClarifyAmbiguitiesOutputSchema = z.object({
-  questions: z.array(z.string()).max(3).describe('List of clarifying questions to ask the user. Maximum of 3 questions.'),
+  questions: z.array(z.string()).max(4).describe('List of clarifying questions to ask the user. Maximum of 4 questions.'),
 });
 export type ClarifyAmbiguitiesOutput = z.infer<typeof ClarifyAmbiguitiesOutputSchema>;
 
@@ -42,7 +42,7 @@ const clarifyAmbiguitiesPrompt = ai.definePrompt({
   name: 'clarifyAmbiguitiesPrompt',
   input: {schema: ClarifyAmbiguitiesInputSchema},
   output: {schema: ClarifyAmbiguitiesOutputSchema},
-  prompt: `You are an AI assistant designed to identify ambiguities or gaps in user-provided documents and context information for ASO (Aims, Skills, Outcomes) generation.
+  prompt: `You are an AI assistant designed to identify missing information in user-provided documents and context for ASO (Aims, Skills, Outcomes) generation.
 
   Analyze the following information:
 
@@ -62,11 +62,13 @@ const clarifyAmbiguitiesPrompt = ai.definePrompt({
   Context: {{{context}}}
   {{/if}}
 
-  Identify any areas where the information is unclear, incomplete, or contradictory. Generate a list of clarifying questions that would help to resolve these ambiguities and ensure the generated ASOs are accurate and relevant. Only include questions related to ambiguities that can reasonably be resolved by the user. Generate a maximum of 3 questions.
+  Based on the provided information, generate a list of targeted follow-up questions to gather missing data. Ask about the following topics if they are not already clear:
+  - Does this course assume prior knowledge or qualifications?
+  - Is there an assessment involved—written, practical, or tutor-observed?
+  - Who is the target audience or profession this is aimed at?
+  - Is the course focused on a specific industry or job role?
 
-  Format the output as a JSON object with a "questions" field containing an array of strings representing the clarifying questions.
-
-  If there are no ambiguities, the "questions" array should be empty.
+  Generate a maximum of 4 questions. If the information is already sufficient, the "questions" array should be empty.
   `,
 });
 

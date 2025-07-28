@@ -3,7 +3,7 @@ export type Generation = {
   aims: string[];
   skills: string[];
   outcomes: string[];
-  cpdHours: number;
+  cpdEstimate: string;
   context?: string;
   docCount: number;
   description?: string;

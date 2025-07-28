@@ -27,19 +27,17 @@ const GenerateAsosInputSchema = z.object({
   courseDescription: z.string().optional().describe('A detailed description of the course.'),
   context: z.string().optional().describe('Optional context for the ASOs, like target country or industry.'),
   refinements: z.array(RefinementSchema).optional().describe('User answers to clarification questions for refining ASOs.'),
-  systemPrompt: z.string().optional().describe('Custom system prompt to guide the AI.'),
 });
 export type GenerateAsosInput = z.infer<typeof GenerateAsosInputSchema>;
 
 const AsoGenerationSchema = z.object({
-  aims: z.array(z.string()).describe('A list of aims for the training program.'),
-  skills: z.array(z.string()).describe('A list of skills to be gained from the training program.'),
-  outcomes: z.array(z.string()).describe('A list of outcomes expected from the training program.'),
-  cpdHours: z
-    .number()
-    .describe(
-      'The estimated Continuing Professional Development (CPD) hours for the course based on the provided material. This should be a single numerical value.'
-    ),
+  isActionable: z.boolean().describe("Whether the provided content is sufficient and relevant for ASO generation."),
+  preliminaryFeedback: z.string().optional().describe("Feedback or questions if the content is not actionable. This could be a request for more detail or a trigger warning/hint."),
+  aims: z.array(z.string().max(250)).max(5).optional().describe('A list of aims for the training program. Max 5 items, 250 chars each.'),
+  skills: z.array(z.string().max(250)).max(5).optional().describe('A list of skills to be gained. Max 5 items, 250 chars each.'),
+  outcomes: z.array(z.string().max(250)).max(5).optional().describe('A list of outcomes. Max 5 items, 250 chars each. Must follow "Learners will be able to [action verb] [skill] to [result or application]" format.'),
+  cpdEstimate: z.string().optional().describe("The estimated CPD points and hours, including a brief justification."),
+  suggestedFrameworks: z.array(z.string()).max(2).optional().describe("A list of up to two suggested skills frameworks (e.g., SFIA, RQF, DigComp)."),
 });
 
 const GenerateAsosOutputSchema = AsoGenerationSchema.extend({
@@ -59,10 +57,10 @@ const prompt = ai.definePrompt(
     name: 'generateAsosPrompt',
     input: {schema: GenerateAsosInputSchema},
     output: {schema: AsoGenerationSchema},
-    prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs. You are also skilled at estimating Continuing Professional Development (CPD) hours.
+    prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs.
 
-    Based on the provided information, generate tailored ASOs. Also, provide an estimate for the CPD hours. The CPD hours should be a single number representing the total estimated time for the course.
-
+    Follow your system instructions to analyze the following information, generate tailored ASOs, and provide feedback.
+    
     {{#if documents}}
     Training Documents:
     {{#each documents}}
@@ -86,22 +84,7 @@ const prompt = ai.definePrompt(
     Answer: {{this.answer}}
     {{/each}}
     {{/if}}
-
-    Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes. Include the estimated CPD hours as a numerical value.
     `,
-  },
-  {
-    // Allow the system prompt to be overridden by the user.
-    customizer: async (input) => {
-      if (input.systemPrompt) {
-        return {
-          config: {
-            system_instructions: input.systemPrompt,
-          },
-        };
-      }
-      return {};
-    },
   }
 );
 
@@ -140,9 +123,12 @@ const generateAsosFlow = ai.defineFlow(
       throw new Error('Failed to generate ASOs.');
     }
 
+    // Only return clarification questions if the input was actionable
+    const questions = asos.isActionable ? clarificationResult.questions : [];
+
     return {
       ...asos,
-      clarificationQuestions: clarificationResult.questions,
+      clarificationQuestions: questions,
     };
   }
 );

@@ -16,19 +16,6 @@ const ALLOWED_FILE_TYPES = [
   'text/markdown',
 ];
 
-const defaultSystemPrompt = `You are an AI assistant that generates Aims, Skills, and Outcomes (ASOs) for training programs based on provided documents and context (country/industry).
-Good ASOs should be:
-- Directly relevant to the content of the provided documents.
-- Tailored to the specified country and industry.
-- Clearly articulated and easy to understand.
-- Actionable and measurable (especially for Outcomes).
-- Distinct for Aims, Skills, and Outcomes.
-Avoid:
-- Generating generic ASOs that are not specific to the input.
-- Including information not present or implied in the documents.
-- Using jargon that is not defined or commonly understood in the specified industry/country.
-- Combining Aims, Skills, and Outcomes inappropriately.`;
-
 const fileSchema = z
   .instanceof(File)
   .refine(file => file.size > 0, 'File cannot be empty.')
@@ -54,7 +41,6 @@ const formSchema = z.object({
     .max(5000, 'Course description cannot exceed 5000 characters.')
     .optional(),
   refinements: z.array(refinementSchema).optional(),
-  systemPrompt: z.string().optional(),
 }).refine(
     (data) => (data.documents && data.documents.length > 0) || !!data.courseDescription,
     {
@@ -69,6 +55,7 @@ type ActionState = {
   input?: {
     context?: string;
     docCount: number;
+    courseDescription?: string;
   };
 };
 
@@ -90,16 +77,20 @@ export async function handleGenerateAsos(
     
     // Filter out empty file inputs from the form
     const documents = (formData.getAll('documents') as File[]).filter(f => f.size > 0);
-    const context = formData.get('context') as string;
+    const context = formData.get('context') as string | null;
     const courseDescription = formData.get('courseDescription') as string | null;
-    let systemPrompt = formData.get('systemPrompt') as string | null;
-
-    // Do not use the default prompt if it was not changed by the user.
-    if (systemPrompt === defaultSystemPrompt) {
-      systemPrompt = null;
+    
+    const refinements: { question: string, answer: string }[] = [];
+    
+    // Handle framework question separately
+    if (formData.has('question_framework')) {
+        const question = formData.get('question_framework') as string;
+        const answer = formData.get('answer_framework') as string;
+        if (answer?.trim()) {
+            refinements.push({ question, answer: answer.trim() });
+        }
     }
 
-    const refinements: { question: string, answer: string }[] = [];
     let i = 0;
     while (formData.has(`question_${i}`)) {
       const question = formData.get(`question_${i}`) as string;
@@ -111,11 +102,10 @@ export async function handleGenerateAsos(
     }
 
     const validatedFields = formSchema.safeParse({
-      context,
+      context: context ?? undefined,
       documents: documents.length > 0 ? documents : undefined,
       courseDescription: courseDescription ?? undefined,
       refinements: refinements.length > 0 ? refinements : undefined,
-      systemPrompt: systemPrompt ?? undefined,
     });
 
     if (!validatedFields.success) {
@@ -123,7 +113,7 @@ export async function handleGenerateAsos(
       return { error: errorMessages };
     }
 
-    const { context: validatedContext, documents: validatedDocuments, courseDescription: validatedCourseDescription, refinements: validatedRefinements, systemPrompt: validatedSystemPrompt } = validatedFields.data;
+    const { context: validatedContext, documents: validatedDocuments, courseDescription: validatedCourseDescription, refinements: validatedRefinements } = validatedFields.data;
 
     const documentDataURIs = validatedDocuments 
       ? await Promise.all(validatedDocuments.map(file => fileToDataURI(file)))
@@ -134,16 +124,15 @@ export async function handleGenerateAsos(
       courseDescription: validatedCourseDescription,
       context: validatedContext,
       refinements: validatedRefinements,
-      systemPrompt: validatedSystemPrompt,
     });
 
-    // Save to Firestore on successful generation without refinements
-    if (result.aims.length > 0 && (!validatedRefinements || validatedRefinements.length === 0)) {
+    // Save to Firestore on successful, actionable generation without refinements
+    if (result.isActionable && result.aims && result.aims.length > 0 && (!validatedRefinements || validatedRefinements.length === 0)) {
         await addDoc(collection(db, 'generations'), {
             aims: result.aims,
             skills: result.skills,
             outcomes: result.outcomes,
-            cpdHours: result.cpdHours,
+            cpdEstimate: result.cpdEstimate || 'N/A',
             context: validatedContext || '',
             docCount: validatedDocuments?.length || 0,
             description: validatedCourseDescription || '',
@@ -158,6 +147,7 @@ export async function handleGenerateAsos(
       input: {
         context: validatedContext,
         docCount: validatedDocuments?.length || 0,
+        courseDescription: validatedCourseDescription,
       },
     };
   } catch (e: any) {
