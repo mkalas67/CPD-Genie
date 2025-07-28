@@ -4,14 +4,28 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, UploadCloud, FileText, X, Wand2 } from 'lucide-react';
+import { Loader2, UploadCloud, FileText, X, Wand2, Settings, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type InputFormProps = {
   isPending: boolean;
   files: File[];
   setFiles: React.Dispatch<React.SetStateAction<File[]>>;
 };
+
+const defaultSystemPrompt = `You are an AI assistant that generates Aims, Skills, and Outcomes (ASOs) for training programs based on provided documents and context (country/industry).
+Good ASOs should be:
+- Directly relevant to the content of the provided documents.
+- Tailored to the specified country and industry.
+- Clearly articulated and easy to understand.
+- Actionable and measurable (especially for Outcomes).
+- Distinct for Aims, Skills, and Outcomes.
+Avoid:
+- Generating generic ASOs that are not specific to the input.
+- Including information not present or implied in the documents.
+- Using jargon that is not defined or commonly understood in the specified industry/country.
+- Combining Aims, Skills, and Outcomes inappropriately.`;
 
 export default function InputForm({ isPending, files, setFiles }: InputFormProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -74,7 +88,7 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
             Describe your course, provide context, and let the genie work its magic.
           </p>
         </div>
-
+        
         <div className="space-y-2">
           <Label htmlFor="course-description">Describe Your Course (Optional)</Label>
           <Textarea
@@ -159,6 +173,32 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
             className="bg-background"
           />
         </div>
+
+        <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="advanced-settings" className="border-b-0">
+                <AccordionTrigger className="text-muted-foreground hover:no-underline hover:text-foreground">
+                    <div className="flex items-center gap-2">
+                        <Settings size={16} />
+                        <span>Advanced Settings</span>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                    <div className="space-y-2 pt-4">
+                        <Label htmlFor="system-prompt">System Prompt</Label>
+                        <p className="text-sm text-muted-foreground">
+                            These instructions guide the AI. Edit them to tailor the results.
+                        </p>
+                        <Textarea
+                            id="system-prompt"
+                            name="systemPrompt"
+                            className="bg-background"
+                            rows={12}
+                            defaultValue={defaultSystemPrompt}
+                        />
+                    </div>
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
 
         <Button type="submit" className="w-full" size="lg" disabled={isButtonDisabled}>
           {isPending ? (

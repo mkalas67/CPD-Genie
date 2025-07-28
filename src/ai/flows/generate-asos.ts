@@ -27,6 +27,7 @@ const GenerateAsosInputSchema = z.object({
   courseDescription: z.string().optional().describe('A detailed description of the course.'),
   context: z.string().optional().describe('Optional context for the ASOs, like target country or industry.'),
   refinements: z.array(RefinementSchema).optional().describe('User answers to clarification questions for refining ASOs.'),
+  systemPrompt: z.string().optional().describe('Custom system prompt to guide the AI.'),
 });
 export type GenerateAsosInput = z.infer<typeof GenerateAsosInputSchema>;
 
@@ -53,41 +54,56 @@ export async function generateAsos(input: GenerateAsosInput): Promise<GenerateAs
   return generateAsosFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'generateAsosPrompt',
-  input: {schema: GenerateAsosInputSchema},
-  output: {schema: AsoGenerationSchema},
-  prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs. You are also skilled at estimating Continuing Professional Development (CPD) hours.
+const prompt = ai.definePrompt(
+  {
+    name: 'generateAsosPrompt',
+    input: {schema: GenerateAsosInputSchema},
+    output: {schema: AsoGenerationSchema},
+    prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs. You are also skilled at estimating Continuing Professional Development (CPD) hours.
 
-  Based on the provided information, generate tailored ASOs. Also, provide an estimate for the CPD hours. The CPD hours should be a single number representing the total estimated time for the course.
+    Based on the provided information, generate tailored ASOs. Also, provide an estimate for the CPD hours. The CPD hours should be a single number representing the total estimated time for the course.
 
-  {{#if documents}}
-  Training Documents:
-  {{#each documents}}
-  {{{media url=this}}}
-  {{/each}}
-  {{/if}}
+    {{#if documents}}
+    Training Documents:
+    {{#each documents}}
+    {{{media url=this}}}
+    {{/each}}
+    {{/if}}
 
-  {{#if courseDescription}}
-  Course Description:
-  {{{courseDescription}}}
-  {{/if}}
+    {{#if courseDescription}}
+    Course Description:
+    {{{courseDescription}}}
+    {{/if}}
 
-  {{#if context}}
-  Context: {{{context}}}
-  {{/if}}
+    {{#if context}}
+    Context: {{{context}}}
+    {{/if}}
 
-  {{#if refinements}}
-  The user has provided the following answers to clarification questions. Use this information to refine the ASOs:
-  {{#each refinements}}
-  Question: {{this.question}}
-  Answer: {{this.answer}}
-  {{/each}}
-  {{/if}}
+    {{#if refinements}}
+    The user has provided the following answers to clarification questions. Use this information to refine the ASOs:
+    {{#each refinements}}
+    Question: {{this.question}}
+    Answer: {{this.answer}}
+    {{/each}}
+    {{/if}}
 
-  Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes. Include the estimated CPD hours as a numerical value.
-  `,
-});
+    Output the ASOs in a structured format, divided into Aims, Skills, and Outcomes. Include the estimated CPD hours as a numerical value.
+    `,
+  },
+  {
+    // Allow the system prompt to be overridden by the user.
+    customizer: async (input) => {
+      if (input.systemPrompt) {
+        return {
+          config: {
+            system_instructions: input.systemPrompt,
+          },
+        };
+      }
+      return {};
+    },
+  }
+);
 
 const generateAsosFlow = ai.defineFlow(
   {

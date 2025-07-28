@@ -16,6 +16,19 @@ const ALLOWED_FILE_TYPES = [
   'text/markdown',
 ];
 
+const defaultSystemPrompt = `You are an AI assistant that generates Aims, Skills, and Outcomes (ASOs) for training programs based on provided documents and context (country/industry).
+Good ASOs should be:
+- Directly relevant to the content of the provided documents.
+- Tailored to the specified country and industry.
+- Clearly articulated and easy to understand.
+- Actionable and measurable (especially for Outcomes).
+- Distinct for Aims, Skills, and Outcomes.
+Avoid:
+- Generating generic ASOs that are not specific to the input.
+- Including information not present or implied in the documents.
+- Using jargon that is not defined or commonly understood in the specified industry/country.
+- Combining Aims, Skills, and Outcomes inappropriately.`;
+
 const fileSchema = z
   .instanceof(File)
   .refine(file => file.size > 0, 'File cannot be empty.')
@@ -41,6 +54,7 @@ const formSchema = z.object({
     .max(5000, 'Course description cannot exceed 5000 characters.')
     .optional(),
   refinements: z.array(refinementSchema).optional(),
+  systemPrompt: z.string().optional(),
 }).refine(
     (data) => (data.documents && data.documents.length > 0) || !!data.courseDescription,
     {
@@ -78,6 +92,12 @@ export async function handleGenerateAsos(
     const documents = (formData.getAll('documents') as File[]).filter(f => f.size > 0);
     const context = formData.get('context') as string;
     const courseDescription = formData.get('courseDescription') as string | null;
+    let systemPrompt = formData.get('systemPrompt') as string | null;
+
+    // Do not use the default prompt if it was not changed by the user.
+    if (systemPrompt === defaultSystemPrompt) {
+      systemPrompt = null;
+    }
 
     const refinements: { question: string, answer: string }[] = [];
     let i = 0;
@@ -95,6 +115,7 @@ export async function handleGenerateAsos(
       documents: documents.length > 0 ? documents : undefined,
       courseDescription: courseDescription ?? undefined,
       refinements: refinements.length > 0 ? refinements : undefined,
+      systemPrompt: systemPrompt ?? undefined,
     });
 
     if (!validatedFields.success) {
@@ -102,7 +123,7 @@ export async function handleGenerateAsos(
       return { error: errorMessages };
     }
 
-    const { context: validatedContext, documents: validatedDocuments, courseDescription: validatedCourseDescription, refinements: validatedRefinements } = validatedFields.data;
+    const { context: validatedContext, documents: validatedDocuments, courseDescription: validatedCourseDescription, refinements: validatedRefinements, systemPrompt: validatedSystemPrompt } = validatedFields.data;
 
     const documentDataURIs = validatedDocuments 
       ? await Promise.all(validatedDocuments.map(file => fileToDataURI(file)))
@@ -113,6 +134,7 @@ export async function handleGenerateAsos(
       courseDescription: validatedCourseDescription,
       context: validatedContext,
       refinements: validatedRefinements,
+      systemPrompt: validatedSystemPrompt,
     });
 
     // Save to Firestore on successful generation without refinements
@@ -141,8 +163,8 @@ export async function handleGenerateAsos(
   } catch (e: any) {
     console.error(e);
     // This is a specific check for a known issue with pdf-parse and Next.js/Webpack
-    if (e.message?.includes("ENOENT: no such file or directory, open './test/data/05-versions-space.pdf'")) {
-      return { error: 'There was an issue processing a PDF file. Please try re-saving the PDF or using a different file.'}
+    if (e.message?.includes('invalid-argument') && e.message?.includes('base64')) {
+      return { error: 'There was an issue processing a file. It may be corrupted or in an unsupported format. Please try re-saving the file or using a different one.'}
     }
     return { error: e.message || 'An unexpected error occurred.' };
   }
