@@ -79,10 +79,10 @@ export default async function GenerationHistory() {
                                                 <span className="truncate max-w-[150px]">Text Input</span>
                                             </div>
                                         )}
-                                        {typeof item.cpdHours === 'number' && item.cpdHours > 0 && (
+                                        {item.cpdEstimate && (
                                             <div className="flex items-center gap-1 text-muted-foreground">
                                                 <Clock size={16} />
-                                                <span>{item.cpdHours} hr(s)</span>
+                                                <span className="truncate max-w-[100px]">{item.cpdEstimate}</span>
                                             </div>
                                         )}
                                         {item.context && (
