@@ -3,7 +3,7 @@ import {googleAI} from '@genkit-ai/googleai';
 
 export const ai = genkit({
   plugins: [googleAI()],
-  model: 'googleai/gemini-2.0-flash',
+  model: 'googleai/gemini-1.5-flash-latest',
   // Add system_instructions to improve ASO generation precision
   config: {
     // These instructions guide the AI on how to generate ASOs
