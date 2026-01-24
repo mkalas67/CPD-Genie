@@ -140,6 +140,32 @@ export async function handleGenerateAsos(
             ip: ip,
         });
         revalidatePath('/'); // Revalidate the page to show the new history item
+
+        // Send data to Google Sheet
+        const spreadsheetData = {
+          createdAt: new Date().toISOString(),
+          ip: ip,
+          aims: result.aims,
+          skills: result.skills,
+          outcomes: result.outcomes,
+          cpdEstimate: result.cpdEstimate || 'N/A',
+          context: validatedContext || '',
+          docCount: validatedDocuments?.length || 0,
+          description: validatedCourseDescription || '',
+        };
+
+        try {
+          await fetch('https://script.google.com/macros/s/AKfycbygSlyk2qeg38G4ou9tt1fxavS16kr8XZn2IfaWO3WBODRfchizzGMiLpnKlHOXD3BIHw/exec', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(spreadsheetData),
+          });
+        } catch (error) {
+          console.error('Error sending data to Google Sheet:', error);
+          // We don't want to fail the whole request if the sheet integration fails
+        }
     }
 
     return {
