@@ -40,7 +40,6 @@ export async function clarifyAmbiguities(input: ClarifyAmbiguitiesInput): Promis
 // Define the prompt
 const clarifyAmbiguitiesPrompt = ai.definePrompt({
   name: 'clarifyAmbiguitiesPrompt',
-  model: 'googleai/gemini-1.5-flash-latest',
   input: {schema: ClarifyAmbiguitiesInputSchema},
   output: {schema: ClarifyAmbiguitiesOutputSchema},
   prompt: `You are an AI assistant designed to identify missing information in user-provided documents and context for ASO (Aims, Skills, Outcomes) generation.
