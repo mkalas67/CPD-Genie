@@ -8,7 +8,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_UPLOAD_SIZE = 25 * 1024 * 1024; // 25MB
 const ALLOWED_FILE_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -19,7 +19,7 @@ const ALLOWED_FILE_TYPES = [
 const fileSchema = z
   .instanceof(File)
   .refine(file => file.size > 0, 'File cannot be empty.')
-  .refine(file => file.size <= MAX_FILE_SIZE, `File size must be less than 5MB.`)
+  .refine(file => file.size <= MAX_UPLOAD_SIZE, `File size must be less than 25MB.`)
   .refine(
     file => ALLOWED_FILE_TYPES.includes(file.type) || file.name.endsWith('.md') || file.name.endsWith('.txt') || file.name.endsWith('.pdf') || file.name.endsWith('.docx'),
     'Invalid file type. Please upload PDF, DOCX, TXT, or MD files.'
@@ -35,6 +35,14 @@ const formSchema = z.object({
   documents: z
     .array(fileSchema)
     .max(5, 'You can upload a maximum of 5 documents.')
+    .refine(
+      (files) => {
+        if (!files || files.length === 0) return true;
+        const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+        return totalSize <= MAX_UPLOAD_SIZE;
+      },
+      `Total file size for all documents must not exceed 25MB.`
+    )
     .optional(),
   courseDescription: z
     .string()

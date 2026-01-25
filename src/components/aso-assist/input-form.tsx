@@ -117,7 +117,7 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
             >
               <UploadCloud className="w-10 h-10 text-muted-foreground" />
               <p className="mt-2 text-sm font-medium">Click to upload or drag and drop</p>
-              <p className="text-xs text-muted-foreground">PDF, DOCX, TXT, MD (Max 5MB per file)</p>
+              <p className="text-xs text-muted-foreground">PDF, DOCX, TXT, MD (Up to 5 files, 25MB total)</p>
               <input
                 type="file"
                 ref={fileInputRef}
