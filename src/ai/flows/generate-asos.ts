@@ -55,6 +55,7 @@ export async function generateAsos(input: GenerateAsosInput): Promise<GenerateAs
 const prompt = ai.definePrompt(
   {
     name: 'generateAsosPrompt',
+    model: 'googleai/gemini-1.5-flash-latest',
     input: {schema: GenerateAsosInputSchema},
     output: {schema: AsoGenerationSchema},
     prompt: `You are an expert in creating Aims, Skills, and Outcomes (ASOs) for training programs.
