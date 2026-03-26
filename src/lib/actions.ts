@@ -162,8 +162,9 @@ export async function handleGenerateAsos(
           description: validatedCourseDescription || '',
         };
 
+        const sheetsWebhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
         try {
-          await fetch('https://script.google.com/macros/s/AKfycbygSlyk2qeg38G4ou9tt1fxavS16kr8XZn2IfaWO3WBODRfchizzGMiLpnKlHOXD3BIHw/exec', {
+          if (sheetsWebhookUrl) await fetch(sheetsWebhookUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
