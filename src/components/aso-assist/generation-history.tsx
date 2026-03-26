@@ -7,6 +7,10 @@ import { History, FileText, Globe, Type, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 async function getHistory(): Promise<Generation[]> {
+  if (!db) {
+    console.error("Firestore is not initialised. Check your Firebase config in .env.");
+    return [];
+  }
   try {
     const generationsRef = collection(db, 'generations');
     const q = query(generationsRef, orderBy('createdAt', 'desc'), limit(10));
@@ -18,7 +22,11 @@ async function getHistory(): Promise<Generation[]> {
       history.push({
         id: doc.id,
         ...data,
-        createdAt: data.createdAt.toDate(),
+        createdAt: typeof data.createdAt?.toDate === 'function'
+            ? data.createdAt.toDate()
+            : data.createdAt instanceof Date
+              ? data.createdAt
+              : new Date(0),
       } as Generation);
     });
     return history;

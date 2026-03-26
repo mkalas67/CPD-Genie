@@ -80,7 +80,7 @@ export async function handleGenerateAsos(
   formData: FormData
 ): Promise<ActionState> {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const ip = (headersList.get('x-forwarded-for') ?? '127.0.0.1').split(',')[0].trim();
     
     // Filter out empty file inputs from the form
@@ -135,7 +135,7 @@ export async function handleGenerateAsos(
     });
 
     // Save to Firestore on successful, actionable generation without refinements
-    if (result.isActionable && result.aims && result.aims.length > 0 && (!validatedRefinements || validatedRefinements.length === 0)) {
+    if (db && result.isActionable && result.aims && result.aims.length > 0 && (!validatedRefinements || validatedRefinements.length === 0)) {
         await addDoc(collection(db, 'generations'), {
             aims: result.aims,
             skills: result.skills,
