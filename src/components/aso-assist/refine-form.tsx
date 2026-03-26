@@ -10,13 +10,14 @@ import type { SupportedModel } from '@/ai/models';
 type RefineFormProps = {
   questions: string[];
   isPending: boolean;
-  context?: string;
+  country?: string;
+  industry?: string;
   courseDescription?: string;
   suggestedFrameworks?: string[];
   model: SupportedModel;
 };
 
-export default function RefineForm({ questions, isPending, context, courseDescription, suggestedFrameworks, model }: RefineFormProps) {
+export default function RefineForm({ questions, isPending, country, industry, courseDescription, suggestedFrameworks, model }: RefineFormProps) {
   if (!questions || questions.length === 0) {
     return null;
   }
@@ -40,8 +41,9 @@ export default function RefineForm({ questions, isPending, context, courseDescri
       </div>
     
       <div className="space-y-8">
-          {/* Pass original context, description, and model so they're included in refinement submission */}
-          {context && <input type="hidden" name="context" value={context} />}
+          {/* Pass original fields so they're included in the refinement submission */}
+          {country && <input type="hidden" name="country" value={country} />}
+          {industry && <input type="hidden" name="industry" value={industry} />}
           {courseDescription && <input type="hidden" name="courseDescription" value={courseDescription} />}
           <input type="hidden" name="model" value={model} />
           

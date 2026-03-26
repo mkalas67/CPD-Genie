@@ -4,8 +4,10 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, UploadCloud, FileText, X, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { COUNTRIES, INDUSTRIES } from '@/lib/constants';
 
 type InputFormProps = {
   isPending: boolean;
@@ -17,25 +19,25 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = React.useState(false);
   const [courseDescription, setCourseDescription] = React.useState('');
+  const [country, setCountry] = React.useState('');
+  const [industry, setIndustry] = React.useState('');
 
   const handleFileChange = (newFiles: FileList | null) => {
     if (newFiles) {
       const newFilesArray = Array.from(newFiles);
-      // Combine with existing files, but prevent duplicates and respect the limit.
       const combined = [...files, ...newFilesArray];
       const uniqueFiles = combined.filter(
         (file, index, self) =>
           index === self.findIndex((f) => f.name === file.name && f.size === file.size)
       );
-      setFiles(uniqueFiles.slice(0, 5)); // Limit to 5 files
+      setFiles(uniqueFiles.slice(0, 5));
     }
   };
 
   const removeFile = (index: number) => {
     setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
     if (fileInputRef.current) {
-      // Reset file input to allow re-selecting the same file if needed
-      fileInputRef.current.value = ""; 
+      fileInputRef.current.value = '';
     }
   };
 
@@ -74,7 +76,7 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
             Describe your course, provide context, and let the genie work its magic.
           </p>
         </div>
-        
+
         <div className="space-y-2">
           <Label htmlFor="course-description">Describe Your Course (Optional)</Label>
           <Textarea
@@ -87,7 +89,7 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
             value={courseDescription}
             onChange={(e) => setCourseDescription(e.target.value)}
           />
-           <p className="text-sm text-muted-foreground text-right">{courseDescription.length} / 5000</p>
+          <p className="text-sm text-muted-foreground text-right">{courseDescription.length} / 5000</p>
         </div>
 
         <div className="relative">
@@ -95,9 +97,7 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
-              Or
-            </span>
+            <span className="bg-card px-2 text-muted-foreground">Or</span>
           </div>
         </div>
 
@@ -106,8 +106,8 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
             <Label>Upload Course Material (Optional, up to 5 files)</Label>
             <div
               className={cn(
-                "relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors",
-                isDragging ? "border-primary bg-primary/10" : "border-input"
+                'relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors',
+                isDragging ? 'border-primary bg-primary/10' : 'border-input'
               )}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
@@ -129,7 +129,7 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
               />
             </div>
           </div>
-          
+
           {files.length > 0 && (
             <div className="space-y-2">
               <Label>Selected files:</Label>
@@ -150,14 +150,38 @@ export default function InputForm({ isPending, files, setFiles }: InputFormProps
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="context">Target Country and/or Industry (Optional)</Label>
-          <Textarea
-            id="context"
-            name="context"
-            placeholder="e.g., Digital marketing in the UK"
-            className="bg-background"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="country">Target Country (Optional)</Label>
+            {/* Hidden input so the value is included in FormData on submit */}
+            <input type="hidden" name="country" value={country} />
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger id="country" className="bg-background">
+                <SelectValue placeholder="Select a country..." />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="industry">Industry (Optional)</Label>
+            {/* Hidden input so the value is included in FormData on submit */}
+            <input type="hidden" name="industry" value={industry} />
+            <Select value={industry} onValueChange={setIndustry}>
+              <SelectTrigger id="industry" className="bg-background">
+                <SelectValue placeholder="Select an industry..." />
+              </SelectTrigger>
+              <SelectContent>
+                {INDUSTRIES.map((ind) => (
+                  <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Button type="submit" className="w-full" size="lg" disabled={isButtonDisabled}>

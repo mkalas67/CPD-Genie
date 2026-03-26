@@ -102,7 +102,8 @@ export default function GeneratorUI() {
             <RefineForm
               questions={state.data.clarificationQuestions}
               isPending={isPending}
-              context={state.input?.context}
+              country={state.input?.country}
+              industry={state.input?.industry}
               courseDescription={state.input?.courseDescription}
               suggestedFrameworks={state.data.suggestedFrameworks}
               model={state.input?.model ?? DEFAULT_MODEL}
