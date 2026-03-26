@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Lightbulb, Loader2 } from 'lucide-react';
 import { Label } from '../ui/label';
+import type { SupportedModel } from '@/ai/models';
 
 type RefineFormProps = {
   questions: string[];
@@ -12,9 +13,10 @@ type RefineFormProps = {
   context?: string;
   courseDescription?: string;
   suggestedFrameworks?: string[];
+  model: SupportedModel;
 };
 
-export default function RefineForm({ questions, isPending, context, courseDescription, suggestedFrameworks }: RefineFormProps) {
+export default function RefineForm({ questions, isPending, context, courseDescription, suggestedFrameworks, model }: RefineFormProps) {
   if (!questions || questions.length === 0) {
     return null;
   }
@@ -38,9 +40,10 @@ export default function RefineForm({ questions, isPending, context, courseDescri
       </div>
     
       <div className="space-y-8">
-          {/* Pass original context and description so it's included in refinement submission */}
+          {/* Pass original context, description, and model so they're included in refinement submission */}
           {context && <input type="hidden" name="context" value={context} />}
           {courseDescription && <input type="hidden" name="courseDescription" value={courseDescription} />}
+          <input type="hidden" name="model" value={model} />
           
           {frameworkQuestion && (
              <div className="space-y-3">

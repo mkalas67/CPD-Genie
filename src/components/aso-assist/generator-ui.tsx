@@ -1,33 +1,27 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useActionState, useState } from 'react';
 import { handleGenerateAsos } from '@/lib/actions';
-import type { GenerateAsosOutput } from '@/ai/flows/generate-asos';
+import type { ActionState } from '@/lib/actions';
+import { DEFAULT_MODEL } from '@/ai/models';
+import type { SupportedModel } from '@/ai/models';
 import InputForm from '@/components/aso-assist/input-form';
 import AsoResults from '@/components/aso-assist/aso-results';
 import RefineForm from '@/components/aso-assist/refine-form';
 import LoadingState from '@/components/aso-assist/loading-state';
+import ModelSelector from '@/components/aso-assist/model-selector';
 import { AlertCircle, RefreshCw, Lightbulb } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-
-type ActionState = {
-  data?: GenerateAsosOutput;
-  error?: string;
-  input?: {
-    context?: string;
-    docCount: number;
-    courseDescription?: string;
-  };
-};
 
 const initialState: ActionState = {};
 
 export default function GeneratorUI() {
   const [state, formAction, isPending] = useActionState(handleGenerateAsos, initialState);
   const [files, setFiles] = useState<File[]>([]);
+  const [selectedModel, setSelectedModel] = useState<SupportedModel>(DEFAULT_MODEL);
 
   const handleStartOver = () => {
     window.location.reload();
@@ -40,9 +34,10 @@ export default function GeneratorUI() {
         formData.append('documents', file);
       });
     }
+    formData.set('model', selectedModel);
     formAction(formData);
   };
-  
+
   const ErrorDisplay = ({ error }: { error: string }) => (
     <Alert variant="destructive" className="bg-red-500/5 border-red-500/20 text-red-700 dark:bg-red-950/20 dark:border-red-500/20 dark:text-red-500">
         <AlertCircle className="h-4 w-4" />
@@ -83,7 +78,7 @@ export default function GeneratorUI() {
         </div>
       );
     }
-    
+
     if (state.data) {
       // Handle the case where the input is not actionable
       if (!state.data.isActionable && state.data.preliminaryFeedback) {
@@ -102,14 +97,15 @@ export default function GeneratorUI() {
       return (
         <div className="w-full space-y-6">
           <AsoResults asoData={state.data} />
-          
+
           {state.data.clarificationQuestions && state.data.clarificationQuestions.length > 0 && (
-            <RefineForm 
+            <RefineForm
               questions={state.data.clarificationQuestions}
               isPending={isPending}
               context={state.input?.context}
               courseDescription={state.input?.courseDescription}
               suggestedFrameworks={state.data.suggestedFrameworks}
+              model={state.input?.model ?? DEFAULT_MODEL}
             />
           )}
 
@@ -124,7 +120,10 @@ export default function GeneratorUI() {
     }
 
     return (
-       <div className="w-full">
+       <div className="w-full space-y-4">
+          <Suspense fallback={null}>
+            <ModelSelector value={selectedModel} onChange={setSelectedModel} />
+          </Suspense>
           <InputForm isPending={isPending} files={files} setFiles={setFiles} />
         </div>
     );

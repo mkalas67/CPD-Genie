@@ -1,11 +1,10 @@
 'use server';
 
 import { generateAsos } from '@/ai/flows/generate-asos';
+import { SUPPORTED_MODELS, DEFAULT_MODEL } from '@/ai/models';
 import { z } from 'zod';
 import type { GenerateAsosOutput } from '@/ai/flows/generate-asos';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { revalidatePath } from 'next/cache';
+import type { SupportedModel } from '@/ai/models';
 import { headers } from 'next/headers';
 
 const MAX_UPLOAD_SIZE = 25 * 1024 * 1024; // 25MB
@@ -57,13 +56,14 @@ const formSchema = z.object({
     }
   );
 
-type ActionState = {
+export type ActionState = {
   data?: GenerateAsosOutput;
   error?: string;
   input?: {
     context?: string;
     docCount: number;
     courseDescription?: string;
+    model?: SupportedModel;
   };
 };
 
@@ -87,6 +87,10 @@ export async function handleGenerateAsos(
     const documents = (formData.getAll('documents') as File[]).filter(f => f.size > 0);
     const context = formData.get('context') as string | null;
     const courseDescription = formData.get('courseDescription') as string | null;
+    const rawModel = formData.get('model') as string | null;
+    const model: SupportedModel = (SUPPORTED_MODELS as readonly string[]).includes(rawModel ?? '')
+      ? (rawModel as SupportedModel)
+      : DEFAULT_MODEL;
     
     const refinements: { question: string, answer: string }[] = [];
     
@@ -132,11 +136,17 @@ export async function handleGenerateAsos(
       courseDescription: validatedCourseDescription,
       context: validatedContext,
       refinements: validatedRefinements,
+      model,
     });
 
-    // Save to Firestore on successful, actionable generation without refinements
-    if (db && result.isActionable && result.aims && result.aims.length > 0 && (!validatedRefinements || validatedRefinements.length === 0)) {
-        await addDoc(collection(db, 'generations'), {
+    // Send data to Google Sheet on successful, actionable generation without refinements
+    if (result.isActionable && result.aims && result.aims.length > 0 && (!validatedRefinements || validatedRefinements.length === 0)) {
+        const sheetsWebhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+        if (sheetsWebhookUrl) {
+          const spreadsheetData = {
+            createdAt: new Date().toISOString(),
+            ip: ip,
+            model: model,
             aims: result.aims,
             skills: result.skills,
             outcomes: result.outcomes,
@@ -144,36 +154,16 @@ export async function handleGenerateAsos(
             context: validatedContext || '',
             docCount: validatedDocuments?.length || 0,
             description: validatedCourseDescription || '',
-            createdAt: serverTimestamp(),
-            ip: ip,
-        });
-        revalidatePath('/'); // Revalidate the page to show the new history item
-
-        // Send data to Google Sheet
-        const spreadsheetData = {
-          createdAt: new Date().toISOString(),
-          ip: ip,
-          aims: result.aims,
-          skills: result.skills,
-          outcomes: result.outcomes,
-          cpdEstimate: result.cpdEstimate || 'N/A',
-          context: validatedContext || '',
-          docCount: validatedDocuments?.length || 0,
-          description: validatedCourseDescription || '',
-        };
-
-        const sheetsWebhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
-        try {
-          if (sheetsWebhookUrl) await fetch(sheetsWebhookUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(spreadsheetData),
-          });
-        } catch (error) {
-          console.error('Error sending data to Google Sheet:', error);
-          // We don't want to fail the whole request if the sheet integration fails
+          };
+          try {
+            await fetch(sheetsWebhookUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(spreadsheetData),
+            });
+          } catch (error) {
+            console.error('Error sending data to Google Sheet:', error);
+          }
         }
     }
 
@@ -183,6 +173,7 @@ export async function handleGenerateAsos(
         context: validatedContext,
         docCount: validatedDocuments?.length || 0,
         courseDescription: validatedCourseDescription,
+        model,
       },
     };
   } catch (e: any) {

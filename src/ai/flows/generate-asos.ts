@@ -11,6 +11,11 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {clarifyAmbiguities} from './clarify-ambiguities';
+import { ASO_SYSTEM_PROMPT, ASO_USER_PROMPT_TEMPLATE } from '@/ai/prompts/aso-prompt';
+import { SUPPORTED_MODELS, DEFAULT_MODEL } from '@/ai/models';
+import type { SupportedModel } from '@/ai/models';
+import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 const RefinementSchema = z.object({
   question: z.string(),
@@ -27,6 +32,7 @@ const GenerateAsosInputSchema = z.object({
   courseDescription: z.string().optional().describe('A detailed description of the course.'),
   context: z.string().optional().describe('Optional context for the ASOs, like target country or industry.'),
   refinements: z.array(RefinementSchema).optional().describe('User answers to clarification questions for refining ASOs.'),
+  model: z.enum(SUPPORTED_MODELS).optional().describe('The AI model to use for generation.'),
 });
 export type GenerateAsosInput = z.infer<typeof GenerateAsosInputSchema>;
 
@@ -52,57 +58,82 @@ export async function generateAsos(input: GenerateAsosInput): Promise<GenerateAs
   return generateAsosFlow(input);
 }
 
-const prompt = ai.definePrompt(
+// Build a plain-text user message from input (for non-Genkit models that can't use Handlebars/media).
+function buildUserMessage(input: GenerateAsosInput): string {
+  const parts: string[] = ['Analyze the following information and generate tailored ASOs.'];
+
+  if (input.courseDescription) {
+    parts.push(`\nCourse Description:\n${input.courseDescription}`);
+  }
+
+  if (input.context) {
+    parts.push(`\nContext: ${input.context}`);
+  }
+
+  if (input.refinements && input.refinements.length > 0) {
+    parts.push('\nThe user has provided the following answers to clarification questions. Use this information to refine the ASOs:');
+    for (const r of input.refinements) {
+      parts.push(`Question: ${r.question}\nAnswer: ${r.answer}`);
+    }
+  }
+
+  return parts.join('\n');
+}
+
+const JSON_SCHEMA_INSTRUCTIONS = `
+Respond ONLY with a valid JSON object matching this schema (no markdown, no explanation):
+{
+  "isActionable": boolean,
+  "preliminaryFeedback": string | undefined,
+  "aims": string[] (max 5, max 250 chars each) | undefined,
+  "skills": string[] (max 5, max 250 chars each) | undefined,
+  "outcomes": string[] (max 5, max 250 chars each) | undefined,
+  "cpdEstimate": string | undefined,
+  "suggestedFrameworks": string[] (max 2) | undefined
+}`;
+
+async function runWithClaude(input: GenerateAsosInput): Promise<z.infer<typeof AsoGenerationSchema>> {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const userMessage = buildUserMessage(input);
+
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-5',
+    max_tokens: 2048,
+    system: ASO_SYSTEM_PROMPT + JSON_SCHEMA_INSTRUCTIONS,
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  const parsed = JSON.parse(text);
+  return AsoGenerationSchema.parse(parsed);
+}
+
+async function runWithOpenAI(input: GenerateAsosInput): Promise<z.infer<typeof AsoGenerationSchema>> {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const userMessage = buildUserMessage(input);
+
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: ASO_SYSTEM_PROMPT + JSON_SCHEMA_INSTRUCTIONS },
+      { role: 'user', content: userMessage },
+    ],
+  });
+
+  const text = response.choices[0].message.content ?? '';
+  const parsed = JSON.parse(text);
+  return AsoGenerationSchema.parse(parsed);
+}
+
+// Genkit prompt (Gemini)
+const genkitPrompt = ai.definePrompt(
   {
     name: 'generateAsosPrompt',
     input: {schema: GenerateAsosInputSchema},
     output: {schema: AsoGenerationSchema},
-    system: `You are an AI assistant that helps create Aims, Skills, and Outcomes (ASOs) for training programs based on provided documents and context. Follow this workflow:
-
-1.  **Check Input Quality:**
-    *   If the document is clearly not for training (e.g., a CV, resume, marketing flyer, brochure), set isActionable to false and use this response for preliminaryFeedback: "The uploaded document doesn't appear to contain structured training content. Please upload a course outline, syllabus, session plan, or learning material. If you're unsure, describe what the document includes and I can guide you."
-    *   If the document is too vague (e.g., only a title), set isActionable to false and use this response for preliminaryFeedback: "I need a bit more detail to help you properly. Could you describe the course aims or list some of the modules, topics, or activities involved?"
-    *   If content describes client benefits, not learner actions, use this hint for preliminaryFeedback: "This seems to describe what the client receives from a treatment. Could you tell me what the learner is being trained to do?"
-    *   If content only describes products/equipment, use this hint for preliminaryFeedback: "Would you be able to describe how learners are trained to use this equipment? I need that context to suggest meaningful ASOs."
-    *   If the content is good, set isActionable to true and proceed.
-
-2.  **Generate ASOs:**
-    *   Propose initial Aims, Skills, and Outcomes.
-    *   Ensure all Outcomes follow the format: "Learners will be able to [action verb] [skill] to [result or application]".
-    *   Limit each list (Aims, Skills, Outcomes) to a maximum of 5 items, and each item to a maximum of 250 characters.
-
-3.  **Recommend CPD & Framework:**
-    *   Estimate CPD points and hours based on content depth. Explain the estimate (e.g., "Based on the content and delivery method, we estimate this course is worth X CPD points. This includes Y hours of active learning...").
-    *   Based on the content, suggest up to two relevant skills frameworks (e.g., SFIA, RQF, DigComp).
-
-4.  **Ask Clarifying Questions:**
-    *   Generate targeted questions to fill information gaps if needed.`,
-    prompt: `Analyze the following information and generate tailored ASOs.
-    
-    {{#if documents}}
-    Training Documents:
-    {{#each documents}}
-    {{{media url=this}}}
-    {{/each}}
-    {{/if}}
-
-    {{#if courseDescription}}
-    Course Description:
-    {{{courseDescription}}}
-    {{/if}}
-
-    {{#if context}}
-    Context: {{{context}}}
-    {{/if}}
-
-    {{#if refinements}}
-    The user has provided the following answers to clarification questions. Use this information to refine the ASOs:
-    {{#each refinements}}
-    Question: {{this.question}}
-    Answer: {{this.answer}}
-    {{/each}}
-    {{/if}}
-    `,
+    system: ASO_SYSTEM_PROMPT,
+    prompt: ASO_USER_PROMPT_TEMPLATE,
   }
 );
 
@@ -113,40 +144,48 @@ const generateAsosFlow = ai.defineFlow(
     outputSchema: GenerateAsosOutputSchema,
   },
   async input => {
+    const model = input.model ?? DEFAULT_MODEL;
+
     // If we are refining, we don't need to ask for more clarifications.
     if (input.refinements && input.refinements.length > 0) {
-      const asosResult = await prompt(input);
-      const asos = asosResult.output;
-      if (!asos) {
-        throw new Error('Failed to generate ASOs.');
+      let asos: z.infer<typeof AsoGenerationSchema>;
+      if (model === 'claude-sonnet') {
+        asos = await runWithClaude(input);
+      } else if (model === 'gpt-4o') {
+        asos = await runWithOpenAI(input);
+      } else {
+        const result = await genkitPrompt(input);
+        if (!result.output) throw new Error('Failed to generate ASOs.');
+        asos = result.output;
       }
-      return {
-        ...asos,
-        clarificationQuestions: [], // No new questions in refinement step
-      };
+      return { ...asos, clarificationQuestions: [] };
     }
 
-    // First step: Run ASO generation and ambiguity clarification in parallel
-    const [asosResult, clarificationResult] = await Promise.all([
-      prompt(input),
-      clarifyAmbiguities({
-        documents: input.documents,
-        courseDescription: input.courseDescription,
-        context: input.context,
-      }),
-    ]);
+    // First step: run ASO generation and clarification in parallel.
+    // Non-Gemini models don't support document media in the same way, so clarification
+    // always runs via Gemini (it only uses text fields).
+    const clarificationPromise = clarifyAmbiguities({
+      documents: input.documents,
+      courseDescription: input.courseDescription,
+      context: input.context,
+    });
 
-    const asos = asosResult.output;
-    if (!asos) {
-      throw new Error('Failed to generate ASOs.');
+    let asos: z.infer<typeof AsoGenerationSchema>;
+    let clarificationResult: Awaited<ReturnType<typeof clarifyAmbiguities>>;
+
+    if (model === 'claude-sonnet') {
+      [asos, clarificationResult] = await Promise.all([runWithClaude(input), clarificationPromise]);
+    } else if (model === 'gpt-4o') {
+      [asos, clarificationResult] = await Promise.all([runWithOpenAI(input), clarificationPromise]);
+    } else {
+      const [asosResult, clarResult] = await Promise.all([genkitPrompt(input), clarificationPromise]);
+      if (!asosResult.output) throw new Error('Failed to generate ASOs.');
+      asos = asosResult.output;
+      clarificationResult = clarResult;
     }
 
-    // Only return clarification questions if the input was actionable
     const questions = asos.isActionable ? clarificationResult.questions : [];
 
-    return {
-      ...asos,
-      clarificationQuestions: questions,
-    };
+    return { ...asos, clarificationQuestions: questions };
   }
 );
